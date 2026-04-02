@@ -1,0 +1,11 @@
+{
+  "name": "api-design",
+  "version": "1.0.0",
+  "description": "API design standards — REST conventions, error handling, versioning, documentation",
+  "requires": ["core"],
+  "conflicts": [],
+  "files": [],
+  "install_type": "claude_md_addon",
+  "settings_merge": {},
+  "post_install": null
+}

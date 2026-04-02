@@ -1,0 +1,22 @@
+{
+  "name": "git-safety",
+  "version": "1.0.0",
+  "description": "Git guardrails — prevent force-push to main, auto-branch naming, commit message standards",
+  "requires": [],
+  "conflicts": [],
+  "files": [
+    {
+      "source": "pre-push-guard.sh",
+      "target": "~/.claude/hooks/pre-push-guard.sh",
+      "mode": "0755"
+    },
+    {
+      "source": "commit-msg-format.sh",
+      "target": "~/.claude/hooks/commit-msg-format.sh",
+      "mode": "0755"
+    }
+  ],
+  "install_type": "files",
+  "settings_merge": {},
+  "post_install": null
+}

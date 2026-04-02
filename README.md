@@ -22,14 +22,19 @@ The installer asks where your projects live (e.g., `~/Development`), installs a 
 
 | Module | Description |
 |--------|-------------|
-| **core** | 12 CLAUDE.md mechanical overrides — context decay awareness, edit integrity, forced verification, definition of done gates (type-check, lint, test, build, coverage) |
-| **statusline** | Animated terminal status bar showing model, context %, git status, task progress, cost, duration, ETAs |
-| **settings** | Curated settings.json presets — power-user, cautious, team-lead — with safety rails built in |
-| **hooks** | Post-edit type-checking, auto-lint, pre-commit verification, sensitive file guards |
-| **mcp** | One-command setup for GitHub, PostgreSQL, and Playwright MCP servers |
-| **teams** | Multi-agent swarm templates — **product SDLC (8 agents)**, fullstack API (6), code review (3), docs sprint (4), refactor squad (5) |
+| **core** | SDLC pipeline + 12 mechanical overrides — the engine that drives everything |
+| **statusline** | Animated status bar: model, context %, git, task progress, cost, ETA |
+| **settings** | settings.json presets — power-user, cautious, team-lead |
+| **hooks** | Post-edit typecheck, auto-lint, pre-commit gate, file guard |
+| **git-safety** | Block force-push to main, conventional commit format hints |
+| **mcp** | MCP servers: GitHub, PostgreSQL, Playwright |
+| **teams** | Agent swarm templates: **product SDLC (8 agents)**, fullstack API, code review, docs sprint, refactor squad |
 | **skills** | Task progress dashboard, skill discovery |
-| **templates** | Project CLAUDE.md generators for React/Next.js, Rust, Python/ML, Expo, and generic fullstack |
+| **templates** | Project CLAUDE.md generators: React, Rust, Python, Expo, generic |
+| **performance** | Perf directives: bundle size, N+1 queries, lazy loading, pagination |
+| **accessibility** | WCAG 2.2 AA: keyboard nav, screen readers, contrast, touch targets |
+| **devops** | CI/CD awareness, env var safety, Docker best practices, migrations |
+| **api-design** | REST conventions, input validation, error handling, versioning |
 
 ## Quick Start
 

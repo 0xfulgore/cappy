@@ -1,0 +1,11 @@
+{
+  "name": "devops",
+  "version": "1.0.0",
+  "description": "DevOps directives — CI/CD awareness, env var safety, Docker best practices, deploy readiness",
+  "requires": ["core"],
+  "conflicts": [],
+  "files": [],
+  "install_type": "claude_md_addon",
+  "settings_merge": {},
+  "post_install": null
+}

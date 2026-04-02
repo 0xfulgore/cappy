@@ -94,6 +94,9 @@ install_module() {
     claude_md)
       install_module_claude_md "$module_name" "$module_dir"
       ;;
+    claude_md_addon)
+      install_module_claude_md_addon "$module_name" "$module_dir"
+      ;;
     files)
       install_module_files "$module_name" "$module_dir" "$module_json"
       ;;
@@ -156,6 +159,72 @@ install_module_claude_md() {
 
   merge_claude_md "$assembled" "$target"
   log_success "CLAUDE.md installed at $target"
+}
+
+# Install a CLAUDE.md addon module (performance, accessibility, devops, api-design)
+# These have a single section.md that gets appended to the managed block in CLAUDE.md
+install_module_claude_md_addon() {
+  local module_name="$1"
+  local module_dir="$2"
+  local section_file="${module_dir}/section.md"
+
+  if [[ ! -f "$section_file" ]]; then
+    log_error "No section.md found for addon module $module_name"
+    return 1
+  fi
+
+  local target
+  if [[ -n "${CAPPY_CLAUDE_MD_TARGET:-}" ]]; then
+    target="$CAPPY_CLAUDE_MD_TARGET"
+  else
+    target="$(pwd)/CLAUDE.md"
+  fi
+
+  if [[ ! -f "$target" ]]; then
+    log_warn "CLAUDE.md not found at $target — install core module first"
+    return 1
+  fi
+
+  local section_content
+  section_content=$(cat "$section_file")
+  local section_marker
+  section_marker=$(grep -o 'cappy:section:[a-z-]*' "$section_file" | head -1 || true)
+
+  # Check if this section is already in the file
+  if [[ -n "$section_marker" ]] && grep -q "$section_marker" "$target"; then
+    # Replace existing section
+    local marker_name="${section_marker#cappy:section:}"
+    local before after
+    before=$(sed -n "1,/<!-- cappy:section:${marker_name} -->/p" "$target" | sed '$ d')
+    after=$(sed -n "/<!-- cappy:end:${marker_name} -->/,\$p" "$target" | sed '1 d')
+    {
+      echo "$before"
+      echo "$section_content"
+      echo "$after"
+    } > "$target"
+    log_success "Updated $module_name section in CLAUDE.md"
+  else
+    # Append before the managed-end marker (or at the end if no marker)
+    if grep -q '<!-- cappy:managed-end -->' "$target"; then
+      local before after
+      before=$(sed -n '1,/<!-- cappy:managed-end -->/p' "$target" | sed '$ d')
+      after=$(sed -n '/<!-- cappy:managed-end -->/,$p' "$target")
+      {
+        echo "$before"
+        echo ""
+        echo "$section_content"
+        echo "$after"
+      } > "$target"
+    else
+      # No managed block — just append
+      {
+        cat "$target"
+        echo ""
+        echo "$section_content"
+      } > "${target}.tmp" && mv "${target}.tmp" "$target"
+    fi
+    log_success "Added $module_name section to CLAUDE.md"
+  fi
 }
 
 # Install file-based module

@@ -102,7 +102,21 @@ parse_args() {
 
 # ── Module selection ─────────────────────────────────────────
 select_modules() {
-  local all_modules=("core" "statusline" "settings" "hooks" "mcp" "teams" "skills" "templates")
+  local all_modules=(
+    "core"
+    "statusline"
+    "settings"
+    "hooks"
+    "git-safety"
+    "mcp"
+    "teams"
+    "skills"
+    "templates"
+    "performance"
+    "accessibility"
+    "devops"
+    "api-design"
+  )
 
   if [[ -n "$CAPPY_SELECTED_MODULES" ]]; then
     IFS=',' read -ra MODULES <<< "$CAPPY_SELECTED_MODULES"
@@ -114,22 +128,24 @@ select_modules() {
     return
   fi
 
-  log_step "Module Selection"
-  printf "  Select which modules to install:\n\n"
-
   local descriptions=(
-    "core          — CLAUDE.md directives (11 production-grade rules)"
-    "statusline    — Animated task progress bar with git/context/cost"
-    "settings      — Curated settings.json presets (permissions, teams, safety)"
-    "hooks         — Pre/post automation (typecheck, lint, file-guard)"
-    "mcp           — MCP server configs (GitHub, PostgreSQL, Playwright)"
-    "teams         — Multi-agent swarm templates (API team, review, docs)"
-    "skills        — Task progress dashboard + skill discovery"
-    "templates     — Project CLAUDE.md generators (React, Rust, Python, etc.)"
+    "core           SDLC pipeline + 12 mechanical overrides (the engine)"
+    "statusline     Animated status bar: git, context %, tasks, cost, ETA"
+    "settings       settings.json presets: power-user / cautious / team-lead"
+    "hooks          Auto typecheck, lint, pre-commit gate, file guard"
+    "git-safety     Block force-push to main, conventional commit hints"
+    "mcp            MCP servers: GitHub, PostgreSQL, Playwright"
+    "teams          Agent swarm templates: SDLC, API, review, docs, refactor"
+    "skills         Task progress dashboard + skill discovery"
+    "templates      Project CLAUDE.md generators: React, Rust, Python, Expo"
+    "performance    Perf directives: bundle size, N+1 queries, lazy loading"
+    "accessibility  WCAG 2.2 AA: keyboard nav, screen readers, contrast"
+    "devops         CI/CD awareness, env var safety, Docker, migrations"
+    "api-design     REST conventions, validation, pagination, error handling"
   )
 
   local selected
-  selected=$(prompt_multiselect "Select modules to install:" "${descriptions[@]}")
+  selected=$(prompt_multiselect "Which modules would you like to install?" "${descriptions[@]}")
 
   MODULES=()
   while IFS= read -r idx; do
@@ -141,7 +157,7 @@ select_modules() {
     exit 1
   fi
 
-  printf "\n  Selected: %s\n" "${MODULES[*]}"
+  printf "\n  %sSelected:%s %s\n" "$BOLD" "$RST" "${MODULES[*]}"
 }
 
 # ── CLAUDE.md location selection ──────────────────────────────

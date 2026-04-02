@@ -1,0 +1,11 @@
+{
+  "name": "performance",
+  "version": "1.0.0",
+  "description": "Performance-focused CLAUDE.md directives — bundle size, query optimization, lazy loading",
+  "requires": ["core"],
+  "conflicts": [],
+  "files": [],
+  "install_type": "claude_md_addon",
+  "settings_merge": {},
+  "post_install": null
+}
