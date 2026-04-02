@@ -404,8 +404,8 @@ main() {
 
   # Phase 5: Installation
   log_step "Phase 5: Installing Modules"
-  resolve_dependencies MODULES
-  if ! check_conflicts MODULES; then
+  resolve_dependencies
+  if ! check_conflicts; then
     if ! prompt_yn "Continue despite conflicts?"; then
       log_error "Installation cancelled."
       exit 1

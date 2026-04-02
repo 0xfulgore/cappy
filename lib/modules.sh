@@ -20,13 +20,13 @@ load_module() {
 }
 
 # Given selected modules, add any missing required dependencies
+# Operates directly on the global MODULES array
 resolve_dependencies() {
-  local -n _selected=$1  # nameref to the selected modules array
   local changed=1
 
   while (( changed )); do
     changed=0
-    for mod in "${_selected[@]}"; do
+    for mod in "${MODULES[@]}"; do
       local module_dir="${CAPPY_MODULES_DIR}/${mod}"
       local module_json="${module_dir}/module.json"
       [[ -f "$module_json" ]] || continue
@@ -36,11 +36,11 @@ resolve_dependencies() {
       while IFS= read -r dep; do
         [[ -z "$dep" ]] && continue
         local found=0
-        for existing in "${_selected[@]}"; do
+        for existing in "${MODULES[@]}"; do
           [[ "$existing" == "$dep" ]] && found=1 && break
         done
         if (( !found )); then
-          _selected+=("$dep")
+          MODULES+=("$dep")
           log_info "Added dependency: $dep (required by $mod)"
           changed=1
         fi
@@ -51,10 +51,9 @@ resolve_dependencies() {
 
 # Warn about conflicting modules
 check_conflicts() {
-  local -n _mods=$1
   local has_conflict=0
 
-  for mod in "${_mods[@]}"; do
+  for mod in "${MODULES[@]}"; do
     local module_json="${CAPPY_MODULES_DIR}/${mod}/module.json"
     [[ -f "$module_json" ]] || continue
 
@@ -62,7 +61,7 @@ check_conflicts() {
     conflicts=$(jq -r '.conflicts[]? // empty' "$module_json" 2>/dev/null)
     while IFS= read -r conflict; do
       [[ -z "$conflict" ]] && continue
-      for other in "${_mods[@]}"; do
+      for other in "${MODULES[@]}"; do
         if [[ "$other" == "$conflict" ]]; then
           log_warn "Module '$mod' conflicts with '$conflict'"
           has_conflict=1
