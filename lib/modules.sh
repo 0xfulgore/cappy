@@ -145,7 +145,7 @@ install_module_claude_md() {
 
   # Assemble CLAUDE.md from template + sections
   local assembled
-  assembled=$(assemble_claude_md "$template" "$sections_dir" "${selected_sections[@]}")
+  assembled=$(assemble_claude_md "$template" "$sections_dir" ${selected_sections[@]+"${selected_sections[@]}"})
 
   # Determine target: global CLAUDE.md location
   # Install to the parent development directory if available, otherwise current dir
