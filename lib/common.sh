@@ -109,43 +109,31 @@ prompt_multiselect() {
   local prompt="$1"
   shift
   local options=("$@")
-  local selected=()
-  for _ in "${options[@]}"; do selected+=(1); done  # all selected by default
 
   if [[ "${CAPPY_NON_INTERACTIVE:-}" == "1" ]]; then
-    # Return all indices
     for i in "${!options[@]}"; do echo "$i"; done
     return
   fi
 
-  printf "\n%s%s%s (space to toggle, enter to confirm)\n" "$BOLD" "$prompt" "$RST"
-
-  local cursor=0
-  while true; do
-    # Clear and redraw
-    for i in "${!options[@]}"; do
-      local marker
-      [[ "${selected[$i]}" == "1" ]] && marker="${GREEN}[x]${RST}" || marker="${DIM}[ ]${RST}"
-      if [[ "$i" == "$cursor" ]]; then
-        printf "  %s> %s %s%s\n" "$BRIGHT_CYAN" "$marker" "${options[$i]}" "$RST"
-      else
-        printf "    %s %s\n" "$marker" "${options[$i]}"
-      fi
-    done
-
-    read -rsn1 key
-    case "$key" in
-      A) (( cursor > 0 )) && (( cursor-- )) ;;  # Up arrow
-      B) (( cursor < ${#options[@]} - 1 )) && (( cursor++ )) ;;  # Down
-      " ") [[ "${selected[$cursor]}" == "1" ]] && selected[$cursor]=0 || selected[$cursor]=1 ;;
-      "") break ;;
-    esac
-    # Move cursor up to redraw
-    printf "\e[%dA" "${#options[@]}"
+  printf "\n%s%s%s\n\n" "$BOLD" "$prompt" "$RST"
+  for i in "${!options[@]}"; do
+    printf "  %s%d)%s %s\n" "$CYAN" $((i + 1)) "$RST" "${options[$i]}"
   done
+  printf "  %s0)%s All of the above (recommended)\n" "$GREEN" "$RST"
 
-  for i in "${!selected[@]}"; do
-    [[ "${selected[$i]}" == "1" ]] && echo "$i"
+  printf "\n%sEnter numbers separated by spaces, or 0 for all [0]: %s" "$BRIGHT_CYAN" "$RST"
+  read -r input
+  input="${input:-0}"
+
+  if [[ "$input" == "0" ]]; then
+    for i in "${!options[@]}"; do echo "$i"; done
+    return
+  fi
+
+  for num in $input; do
+    if [[ "$num" =~ ^[0-9]+$ ]] && (( num >= 1 && num <= ${#options[@]} )); then
+      echo $((num - 1))
+    fi
   done
 }
 
