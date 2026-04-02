@@ -90,12 +90,12 @@ prompt_select() {
   if [[ "${CAPPY_NON_INTERACTIVE:-}" == "1" ]]; then
     echo 0; return
   fi
-  printf "\n%s%s%s\n" "$BOLD" "$prompt" "$RST"
+  printf "\n%s%s%s\n" "$BOLD" "$prompt" "$RST" >&2
   for i in "${!options[@]}"; do
-    printf "  %s%d)%s %s\n" "$CYAN" $((i + 1)) "$RST" "${options[$i]}"
+    printf "  %s%d)%s %s\n" "$CYAN" $((i + 1)) "$RST" "${options[$i]}" >&2
   done
   while true; do
-    printf "%sChoose [1-%d]: %s" "$BRIGHT_CYAN" "${#options[@]}" "$RST"
+    printf "%sChoose [1-%d]: %s" "$BRIGHT_CYAN" "${#options[@]}" "$RST" >&2
     read -r choice
     if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#options[@]} )); then
       echo $((choice - 1))
@@ -115,13 +115,13 @@ prompt_multiselect() {
     return
   fi
 
-  printf "\n%s%s%s\n\n" "$BOLD" "$prompt" "$RST"
+  printf "\n%s%s%s\n\n" "$BOLD" "$prompt" "$RST" >&2
   for i in "${!options[@]}"; do
-    printf "  %s%d)%s %s\n" "$CYAN" $((i + 1)) "$RST" "${options[$i]}"
+    printf "  %s%2d)%s %s\n" "$CYAN" $((i + 1)) "$RST" "${options[$i]}" >&2
   done
-  printf "  %s0)%s All of the above (recommended)\n" "$GREEN" "$RST"
+  printf "  %s 0)%s All of the above (recommended)\n" "$GREEN" "$RST" >&2
 
-  printf "\n%sEnter numbers separated by spaces, or 0 for all [0]: %s" "$BRIGHT_CYAN" "$RST"
+  printf "\n%sEnter numbers separated by spaces, or 0 for all [0]: %s" "$BRIGHT_CYAN" "$RST" >&2
   read -r input
   input="${input:-0}"
 
