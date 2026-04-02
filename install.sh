@@ -1,0 +1,414 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Cappy — Claude Code Power-User Toolkit Installer
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CAPPY_VERSION="1.0.0"
+CAPPY_REPO="https://github.com/garyshannon/cappy.git"
+
+# ── Banner ───────────────────────────────────────────────────
+print_banner() {
+  cat << 'BANNER'
+
+  ██████╗ █████╗ ██████╗ ██████╗ ██╗   ██╗
+ ██╔════╝██╔══██╗██╔══██╗██╔══██╗╚██╗ ██╔╝
+ ██║     ███████║██████╔╝██████╔╝ ╚████╔╝
+ ██║     ██╔══██║██╔═══╝ ██╔═══╝   ╚██╔╝
+ ╚██████╗██║  ██║██║     ██║        ██║
+  ╚═════╝╚═╝  ╚═╝╚═╝     ╚═╝        ╚═╝
+
+BANNER
+  printf "  Claude Code Power-User Toolkit v%s\n\n" "$CAPPY_VERSION"
+}
+
+# ── Usage ────────────────────────────────────────────────────
+print_usage() {
+  cat << 'USAGE'
+Usage: install.sh [options]
+
+Options:
+  --modules LIST    Comma-separated modules to install (default: all)
+                    Available: core,statusline,settings,hooks,mcp,teams,skills,templates
+  --preset NAME     Settings preset: power-user, cautious, team-lead (default: power-user)
+  --claude-md PATH  Where to install CLAUDE.md (default: current directory)
+  --no-backup       Skip backup step
+  --non-interactive Skip all prompts, use defaults
+  --help            Show this help
+
+Examples:
+  # Interactive install (recommended)
+  ./install.sh
+
+  # Install everything non-interactively
+  ./install.sh --non-interactive
+
+  # Install only core directives and statusline
+  ./install.sh --modules core,statusline
+
+  # Curl-pipe install
+  curl -fsSL https://raw.githubusercontent.com/garyshannon/cappy/main/install.sh | bash
+USAGE
+}
+
+# ── Resolve script location ─────────────────────────────────
+resolve_cappy_dir() {
+  # If we have lib/ locally, we're running from a cloned repo
+  local script_dir
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+  if [[ -d "$script_dir/lib" ]] && [[ -d "$script_dir/modules" ]]; then
+    CAPPY_DIR="$script_dir"
+    return
+  fi
+
+  # Running from curl pipe — clone the repo first
+  local clone_target="${HOME}/.cappy/repo"
+  printf "Downloading cappy...\n"
+
+  if [[ -d "$clone_target/.git" ]]; then
+    git -C "$clone_target" pull --quiet 2>/dev/null || true
+  else
+    mkdir -p "$(dirname "$clone_target")"
+    git clone --quiet "$CAPPY_REPO" "$clone_target"
+  fi
+
+  CAPPY_DIR="$clone_target"
+}
+
+# ── Parse arguments ──────────────────────────────────────────
+parse_args() {
+  CAPPY_SELECTED_MODULES=""
+  CAPPY_SETTINGS_PRESET="power-user"
+  CAPPY_CLAUDE_MD_TARGET=""
+  CAPPY_SKIP_BACKUP=0
+  CAPPY_NON_INTERACTIVE=""
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --modules)     CAPPY_SELECTED_MODULES="$2"; shift 2 ;;
+      --preset)      CAPPY_SETTINGS_PRESET="$2"; shift 2 ;;
+      --claude-md)   CAPPY_CLAUDE_MD_TARGET="$2"; shift 2 ;;
+      --no-backup)   CAPPY_SKIP_BACKUP=1; shift ;;
+      --non-interactive) CAPPY_NON_INTERACTIVE=1; shift ;;
+      --help)        print_usage; exit 0 ;;
+      *)             printf "Unknown option: %s\n" "$1"; print_usage; exit 1 ;;
+    esac
+  done
+
+  export CAPPY_SETTINGS_PRESET CAPPY_CLAUDE_MD_TARGET CAPPY_NON_INTERACTIVE
+}
+
+# ── Module selection ─────────────────────────────────────────
+select_modules() {
+  local all_modules=("core" "statusline" "settings" "hooks" "mcp" "teams" "skills" "templates")
+
+  if [[ -n "$CAPPY_SELECTED_MODULES" ]]; then
+    IFS=',' read -ra MODULES <<< "$CAPPY_SELECTED_MODULES"
+    return
+  fi
+
+  if [[ "${CAPPY_NON_INTERACTIVE:-}" == "1" ]]; then
+    MODULES=("${all_modules[@]}")
+    return
+  fi
+
+  log_step "Module Selection"
+  printf "  Select which modules to install:\n\n"
+
+  local descriptions=(
+    "core          — CLAUDE.md directives (11 production-grade rules)"
+    "statusline    — Animated task progress bar with git/context/cost"
+    "settings      — Curated settings.json presets (permissions, teams, safety)"
+    "hooks         — Pre/post automation (typecheck, lint, file-guard)"
+    "mcp           — MCP server configs (GitHub, PostgreSQL, Playwright)"
+    "teams         — Multi-agent swarm templates (API team, review, docs)"
+    "skills        — Task progress dashboard + skill discovery"
+    "templates     — Project CLAUDE.md generators (React, Rust, Python, etc.)"
+  )
+
+  local selected
+  selected=$(prompt_multiselect "Select modules to install:" "${descriptions[@]}")
+
+  MODULES=()
+  while IFS= read -r idx; do
+    [[ -n "$idx" ]] && MODULES+=("${all_modules[$idx]}")
+  done <<< "$selected"
+
+  if [[ ${#MODULES[@]} -eq 0 ]]; then
+    log_error "No modules selected. Nothing to install."
+    exit 1
+  fi
+
+  printf "\n  Selected: %s\n" "${MODULES[*]}"
+}
+
+# ── CLAUDE.md location selection ──────────────────────────────
+select_claude_md_target() {
+  local has_core=0
+  for mod in "${MODULES[@]}"; do
+    [[ "$mod" == "core" ]] && has_core=1 && break
+  done
+  (( !has_core )) && return
+
+  # If already specified via flag, use that
+  if [[ -n "${CAPPY_CLAUDE_MD_TARGET:-}" ]]; then return; fi
+
+  # Auto-detect the best default:
+  # 1. Find an existing CLAUDE.md walking up from cwd
+  # 2. Find a common dev root directory (~/Development, ~/dev, ~/projects, etc.)
+  # 3. Fall back to home directory
+  local default_dir=""
+
+  # Check for existing CLAUDE.md up the tree (highest one wins)
+  local dir="$(pwd)"
+  while [[ "$dir" != "/" ]] && [[ "$dir" != "$HOME" ]]; do
+    if [[ -f "$dir/CLAUDE.md" ]]; then
+      default_dir="$dir"
+    fi
+    dir=$(dirname "$dir")
+  done
+
+  # If none found, check common dev root directories
+  if [[ -z "$default_dir" ]]; then
+    for candidate in "$HOME/Development" "$HOME/dev" "$HOME/projects" "$HOME/code" "$HOME/src" "$HOME/workspace"; do
+      if [[ -d "$candidate" ]]; then
+        default_dir="$candidate"
+        break
+      fi
+    done
+  fi
+
+  # Last resort: home directory
+  [[ -z "$default_dir" ]] && default_dir="$HOME"
+
+  if [[ "${CAPPY_NON_INTERACTIVE:-}" == "1" ]]; then
+    CAPPY_CLAUDE_MD_TARGET="${default_dir}/CLAUDE.md"
+    export CAPPY_CLAUDE_MD_TARGET
+    return
+  fi
+
+  printf "\n"
+  log_info "Cappy installs a CLAUDE.md with the SDLC pipeline directives."
+  log_info "Claude Code walks UP the directory tree to find CLAUDE.md files."
+  log_info "So installing at your top-level projects folder makes it active EVERYWHERE."
+  printf "\n"
+  printf "  Where do all your projects live? [%s]: " "$default_dir"
+  read -r user_input
+  local chosen="${user_input:-$default_dir}"
+
+  # Expand ~ if user typed it
+  chosen="${chosen/#\~/$HOME}"
+
+  if [[ ! -d "$chosen" ]]; then
+    log_warn "$chosen doesn't exist. Creating it."
+    mkdir -p "$chosen"
+  fi
+
+  CAPPY_CLAUDE_MD_TARGET="${chosen}/CLAUDE.md"
+  export CAPPY_CLAUDE_MD_TARGET
+  log_success "CLAUDE.md → $CAPPY_CLAUDE_MD_TARGET (covers all projects under $chosen/)"
+}
+
+# ── Settings preset selection ────────────────────────────────
+select_preset() {
+  # Only ask if settings module is selected
+  local has_settings=0
+  for mod in "${MODULES[@]}"; do
+    [[ "$mod" == "settings" ]] && has_settings=1 && break
+  done
+  (( !has_settings )) && return
+
+  if [[ "${CAPPY_NON_INTERACTIVE:-}" == "1" ]]; then return; fi
+
+  local choice
+  choice=$(prompt_select "Settings preset:" \
+    "power-user  — Full permissions, agent teams, auto-dream" \
+    "cautious    — Restricted permissions, safer defaults" \
+    "team-lead   — Optimized for multi-agent coordination")
+
+  case "$choice" in
+    0) CAPPY_SETTINGS_PRESET="power-user" ;;
+    1) CAPPY_SETTINGS_PRESET="cautious" ;;
+    2) CAPPY_SETTINGS_PRESET="team-lead" ;;
+  esac
+  export CAPPY_SETTINGS_PRESET
+}
+
+# ── MCP server selection ─────────────────────────────────────
+select_mcp_servers() {
+  local has_mcp=0
+  for mod in "${MODULES[@]}"; do
+    [[ "$mod" == "mcp" ]] && has_mcp=1 && break
+  done
+  (( !has_mcp )) && return
+
+  if [[ "${CAPPY_NON_INTERACTIVE:-}" == "1" ]]; then
+    CAPPY_MCP_SERVERS="github,postgres,playwright"
+    export CAPPY_MCP_SERVERS
+    return
+  fi
+
+  local descriptions=(
+    "GitHub     — PR/issue management, code search"
+    "PostgreSQL — Database queries and exploration"
+    "Playwright — Browser automation and testing"
+  )
+
+  log_step "MCP Server Selection"
+  local selected
+  selected=$(prompt_multiselect "Select MCP servers to configure:" "${descriptions[@]}")
+
+  local servers=("github" "postgres" "playwright")
+  local chosen=()
+  while IFS= read -r idx; do
+    [[ -n "$idx" ]] && chosen+=("${servers[$idx]}")
+  done <<< "$selected"
+
+  CAPPY_MCP_SERVERS=$(IFS=','; echo "${chosen[*]}")
+  export CAPPY_MCP_SERVERS
+}
+
+# ── Verification ─────────────────────────────────────────────
+verify_installation() {
+  log_step "Verification"
+  local errors=0
+
+  # Check settings.json is valid JSON
+  if [[ -f "$CLAUDE_HOME/settings.json" ]]; then
+    if jq '.' "$CLAUDE_HOME/settings.json" >/dev/null 2>&1; then
+      log_success "settings.json is valid JSON"
+    else
+      log_error "settings.json is invalid JSON!"
+      errors=$((errors + 1))
+    fi
+  fi
+
+  # Check scripts are executable
+  if [[ -f "$CLAUDE_HOME/hooks/task-progress-statusline.sh" ]]; then
+    if [[ -x "$CLAUDE_HOME/hooks/task-progress-statusline.sh" ]]; then
+      log_success "Statusline hook is executable"
+    else
+      log_error "Statusline hook is not executable"
+      errors=$((errors + 1))
+    fi
+  fi
+
+  # Check CLAUDE.md was written
+  local target="${CAPPY_CLAUDE_MD_TARGET:-$(pwd)/CLAUDE.md}"
+  if [[ -f "$target" ]]; then
+    log_success "CLAUDE.md installed at $target"
+  fi
+
+  return $errors
+}
+
+# ── Summary ──────────────────────────────────────────────────
+print_summary() {
+  log_step "Installation Complete!"
+
+  printf "\n  %sModules installed:%s\n" "$BOLD" "$RST"
+  for mod in "${MODULES[@]}"; do
+    printf "    %s✓%s %s\n" "$GREEN" "$RST" "$mod"
+  done
+
+  if [[ -n "${BACKUP_DIR:-}" ]]; then
+    printf "\n  %sBackup:%s %s\n" "$BOLD" "$RST" "$BACKUP_DIR"
+  fi
+
+  if [[ -n "${CAPPY_CLAUDE_MD_TARGET:-}" ]]; then
+    local md_dir
+    md_dir=$(dirname "$CAPPY_CLAUDE_MD_TARGET")
+    printf "\n  %sSDLC Pipeline:%s Active in ALL projects under %s/\n" "$BOLD" "$RST" "$md_dir"
+    printf "  Just run %sclaude%s in any project directory and start working.\n" "$CYAN" "$RST"
+    printf "  The SDLC pipeline kicks in automatically for non-trivial tasks.\n"
+    printf "  Say %s\"just do it\"%s or %s\"skip the process\"%s to bypass.\n" "$CYAN" "$RST" "$CYAN" "$RST"
+  fi
+
+  printf "\n  %sNext steps:%s\n" "$BOLD" "$RST"
+  printf "    1. Restart Claude Code to pick up new settings\n"
+  printf "    2. Open any project and try: %sclaude \"Add a user dashboard\"%s\n" "$CYAN" "$RST"
+  printf "    3. Claude will automatically: discover → spec → design → build → review → validate\n"
+
+  printf "\n  %sLearn more:%s https://github.com/garyshannon/cappy\n\n" "$DIM" "$RST"
+}
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Main
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+main() {
+  print_banner
+  parse_args "$@"
+  resolve_cappy_dir
+
+  # Source library functions
+  # shellcheck source=lib/common.sh
+  source "$CAPPY_DIR/lib/common.sh"
+  # shellcheck source=lib/detect.sh
+  source "$CAPPY_DIR/lib/detect.sh"
+  # shellcheck source=lib/backup.sh
+  source "$CAPPY_DIR/lib/backup.sh"
+  # shellcheck source=lib/merge.sh
+  source "$CAPPY_DIR/lib/merge.sh"
+  # shellcheck source=lib/modules.sh
+  source "$CAPPY_DIR/lib/modules.sh"
+
+  CAPPY_MODULES_DIR="${CAPPY_DIR}/modules"
+  export CAPPY_MODULES_DIR
+
+  # Phase 1: Environment Detection
+  log_step "Phase 1: Environment Detection"
+  detect_os
+  detect_shell
+  ensure_jq
+  detect_claude_home
+  detect_existing_config
+  detect_installed_modules
+  print_detection_summary
+
+  # Phase 2: Backup
+  if (( !CAPPY_SKIP_BACKUP )); then
+    log_step "Phase 2: Backup"
+    create_backup
+  else
+    log_info "Skipping backup (--no-backup)"
+  fi
+
+  # Phase 3: Module Selection
+  log_step "Phase 3: Module Selection"
+  select_modules
+
+  # Phase 4: Configuration
+  log_step "Phase 4: Configuration"
+  select_claude_md_target
+  select_preset
+  select_mcp_servers
+
+  # Phase 5: Installation
+  log_step "Phase 5: Installing Modules"
+  resolve_dependencies MODULES
+  if ! check_conflicts MODULES; then
+    if ! prompt_yn "Continue despite conflicts?"; then
+      log_error "Installation cancelled."
+      exit 1
+    fi
+  fi
+
+  for mod in "${MODULES[@]}"; do
+    install_module "$mod"
+  done
+
+  record_installation "${MODULES[@]}"
+
+  # Phase 6: Verification
+  if ! verify_installation; then
+    log_warn "Some verifications failed — check the errors above."
+  fi
+
+  # Phase 7: Summary
+  print_summary
+}
+
+main "$@"

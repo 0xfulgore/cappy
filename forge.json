@@ -1,0 +1,9 @@
+{
+  "name": "cappy",
+  "version": "1.0.0",
+  "description": "The ultimate Claude Code power-user toolkit",
+  "homepage": "https://github.com/garyshannon/cappy",
+  "modules": ["core", "statusline", "settings", "hooks", "mcp", "teams", "skills", "templates"],
+  "min_claude_code_version": "1.0.0",
+  "requires": ["jq", "bash>=4"]
+}

@@ -1,0 +1,21 @@
+{
+  "name": "teams",
+  "version": "1.0.0",
+  "description": "Multi-agent swarm templates for common development workflows",
+  "requires": ["core"],
+  "conflicts": [],
+  "files": [
+    {
+      "source": "scaffold.sh",
+      "target": "~/.cappy/scaffold-team.sh",
+      "mode": "0755"
+    }
+  ],
+  "install_type": "files",
+  "settings_merge": {
+    "env": {
+      "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+    }
+  },
+  "post_install": null
+}

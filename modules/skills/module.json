@@ -1,0 +1,22 @@
+{
+  "name": "skills",
+  "version": "1.0.0",
+  "description": "Task progress dashboard and skill discovery",
+  "requires": [],
+  "conflicts": [],
+  "files": [
+    {
+      "source": "progress/SKILL.md",
+      "target": "~/.agents/skills/progress/SKILL.md",
+      "mode": "0644"
+    },
+    {
+      "source": "find-skills/SKILL.md",
+      "target": "~/.agents/skills/find-skills/SKILL.md",
+      "mode": "0644"
+    }
+  ],
+  "install_type": "files",
+  "settings_merge": {},
+  "post_install": null
+}

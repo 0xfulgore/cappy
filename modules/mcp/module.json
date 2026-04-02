@@ -1,0 +1,11 @@
+{
+  "name": "mcp",
+  "version": "1.0.0",
+  "description": "MCP server configurations for GitHub, PostgreSQL, Playwright",
+  "requires": [],
+  "conflicts": [],
+  "files": [],
+  "install_type": "files",
+  "settings_merge": {},
+  "post_install": null
+}

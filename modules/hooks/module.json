@@ -1,0 +1,32 @@
+{
+  "name": "hooks",
+  "version": "1.0.0",
+  "description": "Pre/post automation hooks for Claude Code",
+  "requires": [],
+  "conflicts": [],
+  "files": [
+    {
+      "source": "post-edit-typecheck.sh",
+      "target": "~/.claude/hooks/post-edit-typecheck.sh",
+      "mode": "0755"
+    },
+    {
+      "source": "post-edit-lint.sh",
+      "target": "~/.claude/hooks/post-edit-lint.sh",
+      "mode": "0755"
+    },
+    {
+      "source": "pre-commit-check.sh",
+      "target": "~/.claude/hooks/pre-commit-check.sh",
+      "mode": "0755"
+    },
+    {
+      "source": "file-guard.sh",
+      "target": "~/.claude/hooks/file-guard.sh",
+      "mode": "0755"
+    }
+  ],
+  "settings_merge": {},
+  "install_type": "files",
+  "post_install": null
+}

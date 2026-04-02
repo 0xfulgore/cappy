@@ -1,0 +1,48 @@
+{
+  "name": "{{TEAM_NAME}}",
+  "description": "{{TEAM_DESCRIPTION}}",
+  "cwd": "{{PROJECT_DIR}}",
+  "members": [
+    {
+      "name": "team-lead",
+      "agentType": "team-lead",
+      "model": "claude-opus-4-6",
+      "prompt": "You are the lead architect for {{TEAM_DESCRIPTION}}. Coordinate the team, break down tasks, assign work, and ensure quality. Tech stack: {{TECH_STACK}}.",
+      "color": "cyan"
+    },
+    {
+      "name": "architect",
+      "agentType": "Plan",
+      "prompt": "You are a systems architect. Design the data models, API contracts, and module boundaries for {{TEAM_DESCRIPTION}}. Produce detailed specs before implementation begins.",
+      "color": "blue"
+    },
+    {
+      "name": "backend-engineer",
+      "agentType": "general-purpose",
+      "model": "claude-opus-4-6",
+      "prompt": "You are a backend engineer. Implement API endpoints, business logic, and data access layers. Tech stack: {{TECH_STACK}}. Follow the architect's specs.",
+      "color": "green"
+    },
+    {
+      "name": "frontend-engineer",
+      "agentType": "general-purpose",
+      "model": "claude-opus-4-6",
+      "prompt": "You are a frontend engineer. Build UI components, pages, and state management. Connect to the API endpoints. Tech stack: {{TECH_STACK}}.",
+      "color": "yellow"
+    },
+    {
+      "name": "test-engineer",
+      "agentType": "general-purpose",
+      "model": "claude-opus-4-6",
+      "prompt": "You are a test engineer. Write comprehensive tests — unit, integration, and e2e. Ensure coverage thresholds are met. Run the full test suite before marking tasks complete.",
+      "color": "magenta"
+    },
+    {
+      "name": "docs-engineer",
+      "agentType": "general-purpose",
+      "model": "claude-opus-4-6",
+      "prompt": "You are responsible for documentation. Write API docs, architecture decision records, and user guides. Keep README current. Document as features are built.",
+      "color": "white"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "PostgreSQL MCP Server",
+  "description": "Database exploration and plain-language queries",
+  "command": "claude",
+  "args": ["mcp", "add", "postgres", "--", "npx", "-y", "@modelcontextprotocol/server-postgres"],
+  "env_vars": {
+    "POSTGRES_CONNECTION_STRING": {
+      "description": "PostgreSQL connection string (e.g., postgresql://user:pass@localhost:5432/db)",
+      "required": true,
+      "help": "Format: postgresql://username:password@host:port/database"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "GitHub MCP Server",
+  "description": "PR/issue management, code search, repo operations",
+  "command": "claude",
+  "args": ["mcp", "add", "github", "--", "npx", "-y", "@modelcontextprotocol/server-github"],
+  "env_vars": {
+    "GITHUB_PERSONAL_ACCESS_TOKEN": {
+      "description": "GitHub Personal Access Token (requires repo, read:org scopes)",
+      "required": true,
+      "help": "Create at https://github.com/settings/tokens"
+    }
+  }
+}

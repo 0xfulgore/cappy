@@ -1,0 +1,7 @@
+{
+  "name": "Playwright MCP Server",
+  "description": "Browser automation for testing and UI debugging",
+  "command": "claude",
+  "args": ["mcp", "add", "playwright", "--", "npx", "-y", "@anthropic/mcp-server-playwright"],
+  "env_vars": {}
+}

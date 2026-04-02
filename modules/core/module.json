@@ -1,0 +1,11 @@
+{
+  "name": "core",
+  "version": "1.0.0",
+  "description": "CLAUDE.md mechanical overrides for production-grade AI coding",
+  "requires": [],
+  "conflicts": [],
+  "files": [],
+  "settings_merge": {},
+  "install_type": "claude_md",
+  "post_install": null
+}

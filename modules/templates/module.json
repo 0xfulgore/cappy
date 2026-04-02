@@ -1,0 +1,17 @@
+{
+  "name": "templates",
+  "version": "1.0.0",
+  "description": "Project CLAUDE.md starter templates for common tech stacks",
+  "requires": [],
+  "conflicts": [],
+  "files": [
+    {
+      "source": "scaffold-project.sh",
+      "target": "~/.cappy/scaffold-project.sh",
+      "mode": "0755"
+    }
+  ],
+  "install_type": "files",
+  "settings_merge": {},
+  "post_install": null
+}

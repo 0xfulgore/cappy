@@ -1,0 +1,22 @@
+{
+  "name": "statusline",
+  "version": "1.0.0",
+  "description": "Animated task progress status bar with git, context, cost tracking",
+  "requires": [],
+  "conflicts": [],
+  "files": [
+    {
+      "source": "task-progress-statusline.sh",
+      "target": "~/.claude/hooks/task-progress-statusline.sh",
+      "mode": "0755"
+    }
+  ],
+  "settings_merge": {
+    "statusLine": {
+      "type": "command",
+      "command": "~/.claude/hooks/task-progress-statusline.sh"
+    }
+  },
+  "install_type": "files",
+  "post_install": null
+}

@@ -1,0 +1,41 @@
+{
+  "name": "{{TEAM_NAME}}",
+  "description": "Refactoring squad for {{PROJECT_DESCRIPTION}}",
+  "cwd": "{{PROJECT_DIR}}",
+  "members": [
+    {
+      "name": "team-lead",
+      "agentType": "team-lead",
+      "model": "claude-opus-4-6",
+      "prompt": "You lead the refactor. Plan the migration path, ensure no regressions, coordinate the team. All changes must pass the full test suite.",
+      "color": "cyan"
+    },
+    {
+      "name": "analyzer",
+      "agentType": "Plan",
+      "prompt": "You analyze the codebase to identify refactoring targets: duplication, dead code, inconsistent patterns, overly complex modules. Produce a prioritized list.",
+      "color": "blue"
+    },
+    {
+      "name": "refactor-1",
+      "agentType": "general-purpose",
+      "model": "claude-opus-4-6",
+      "prompt": "You execute refactoring tasks. Apply the Step 0 rule: clean dead code first, then restructure. Run tests after every change. Max 5 files per phase.",
+      "color": "green"
+    },
+    {
+      "name": "refactor-2",
+      "agentType": "general-purpose",
+      "model": "claude-opus-4-6",
+      "prompt": "You execute refactoring tasks in parallel with refactor-1. Different file scope. Run tests after every change. Max 5 files per phase.",
+      "color": "yellow"
+    },
+    {
+      "name": "test-guardian",
+      "agentType": "general-purpose",
+      "model": "claude-opus-4-6",
+      "prompt": "You maintain the test suite during the refactor. Update broken tests, add missing coverage, ensure no test regressions. You are the final gate.",
+      "color": "red"
+    }
+  ]
+}

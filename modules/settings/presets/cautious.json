@@ -1,0 +1,21 @@
+{
+  "env": {},
+  "permissions": {
+    "allow": [
+      "Read(*)",
+      "Edit(*)",
+      "WebFetch(*)",
+      "WebSearch(*)"
+    ],
+    "deny": [
+      "Bash(rm *)",
+      "Bash(rm -rf *)",
+      "Bash(sudo *)",
+      "Bash(chmod *)",
+      "Write(*.env*)",
+      "Write(*credentials*)",
+      "Write(*secret*)"
+    ]
+  },
+  "autoDreamEnabled": false
+}

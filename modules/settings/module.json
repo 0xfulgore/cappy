@@ -1,0 +1,11 @@
+{
+  "name": "settings",
+  "version": "1.0.0",
+  "description": "Curated settings.json presets for Claude Code",
+  "requires": [],
+  "conflicts": [],
+  "files": [],
+  "install_type": "settings",
+  "settings_merge": {},
+  "post_install": null
+}

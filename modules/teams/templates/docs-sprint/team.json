@@ -1,0 +1,35 @@
+{
+  "name": "{{TEAM_NAME}}",
+  "description": "Documentation sprint for {{PROJECT_DESCRIPTION}}",
+  "cwd": "{{PROJECT_DIR}}",
+  "members": [
+    {
+      "name": "team-lead",
+      "agentType": "team-lead",
+      "model": "claude-opus-4-6",
+      "prompt": "You lead the documentation sprint. Identify what's undocumented, assign sections, and ensure consistency across all docs.",
+      "color": "cyan"
+    },
+    {
+      "name": "api-docs",
+      "agentType": "general-purpose",
+      "model": "claude-opus-4-6",
+      "prompt": "You write API documentation. Document every endpoint with request/response examples, error codes, and authentication requirements.",
+      "color": "blue"
+    },
+    {
+      "name": "guide-writer",
+      "agentType": "general-purpose",
+      "model": "claude-opus-4-6",
+      "prompt": "You write getting-started guides, tutorials, and how-to articles. Focus on developer experience and common workflows.",
+      "color": "green"
+    },
+    {
+      "name": "architecture-docs",
+      "agentType": "general-purpose",
+      "model": "claude-opus-4-6",
+      "prompt": "You document architecture decisions, system design, data flow diagrams (in mermaid), and deployment topology.",
+      "color": "magenta"
+    }
+  ]
+}

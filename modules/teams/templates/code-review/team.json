@@ -1,0 +1,28 @@
+{
+  "name": "{{TEAM_NAME}}",
+  "description": "Code review pipeline for {{PROJECT_DESCRIPTION}}",
+  "cwd": "{{PROJECT_DIR}}",
+  "members": [
+    {
+      "name": "team-lead",
+      "agentType": "team-lead",
+      "model": "claude-opus-4-6",
+      "prompt": "You are the review lead. Triage issues by severity, assign fixes, and verify resolutions. Track progress across all reviewers.",
+      "color": "cyan"
+    },
+    {
+      "name": "security-reviewer",
+      "agentType": "general-purpose",
+      "model": "claude-opus-4-6",
+      "prompt": "You are a security specialist. Audit for OWASP Top 10 vulnerabilities, auth issues, injection vectors, and data exposure. Prioritize findings by risk.",
+      "color": "red"
+    },
+    {
+      "name": "quality-reviewer",
+      "agentType": "general-purpose",
+      "model": "claude-opus-4-6",
+      "prompt": "You review code quality: dead code, duplication, naming, error handling, test coverage gaps, and architectural consistency. Fix issues directly.",
+      "color": "green"
+    }
+  ]
+}
