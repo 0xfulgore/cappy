@@ -6,7 +6,7 @@ Install once. Then just use `claude` normally in any project. The SDLC pipeline 
 
 ```bash
 # Install
-git clone https://github.com/garyshannon/cappy.git && cd cappy && ./install.sh
+git clone https://github.com/0xfulgore/cappy.git && cd cappy && ./install.sh
 
 # That's it. Now in ANY project:
 cd ~/your-project
@@ -28,7 +28,7 @@ The installer asks where your projects live (e.g., `~/Development`), installs a 
 | **hooks** | Post-edit typecheck, auto-lint, pre-commit gate, file guard |
 | **git-safety** | Block force-push to main, conventional commit format hints |
 | **mcp** | MCP servers: GitHub, PostgreSQL, Playwright |
-| **teams** | Agent swarm templates: **product SDLC (8 agents)**, fullstack API, code review, docs sprint, refactor squad |
+| **teams** | 14 agent swarm templates: product SDLC, audit sweep, migration squad, perf clinic, test factory, dependency upgrade, incident responder, onboarding guide, API versioning, monorepo splitter, fullstack API, code review, docs sprint, refactor squad |
 | **skills** | Task progress dashboard, skill discovery |
 | **templates** | Project CLAUDE.md generators: React, Rust, Python, Expo, generic |
 | **performance** | Perf directives: bundle size, N+1 queries, lazy loading, pagination |
@@ -40,7 +40,7 @@ The installer asks where your projects live (e.g., `~/Development`), installs a 
 
 ### Install everything (interactive)
 ```bash
-git clone https://github.com/garyshannon/cappy.git
+git clone https://github.com/0xfulgore/cappy.git
 cd cappy
 ./install.sh
 ```
@@ -133,7 +133,24 @@ Review and QA failures loop back to engineers until all issues are fixed.
   --tech "Rust with Actix-Web and SQLx"
 ```
 
-Templates: `product-sdlc`, `fullstack-api`, `code-review`, `docs-sprint`, `refactor-squad`
+All templates:
+
+| Template | Agents | Pipeline |
+|----------|--------|----------|
+| `product-sdlc` | 8 | discovery → spec → design → build → review → QA |
+| `audit-sweep` | 8 | 4 parallel auditors → triage → 2 fixers → verifier |
+| `migration-squad` | 6 | analyze → design → migrate → validate → rollback test |
+| `perf-clinic` | 5 | profile → plan → optimize (BE+FE parallel) → validate |
+| `test-factory` | 5 | analyze gaps → plan → write unit+integration+e2e → validate |
+| `dependency-upgrade` | 5 | scan → plan → upgrade → compatibility test |
+| `incident-responder` | 5 | reproduce → root cause → hotfix → post-mortem |
+| `onboarding-guide` | 5 | map → document architecture → trace flows → write guide |
+| `api-versioning` | 5 | analyze contracts → design v2 → migrate → update clients |
+| `monorepo-splitter` | 5 | map deps → define boundaries → extract → update CI/CD |
+| `fullstack-api` | 6 | architect → build (BE+FE) → test → docs |
+| `code-review` | 3 | security + quality review |
+| `docs-sprint` | 4 | API docs + guides + architecture |
+| `refactor-squad` | 5 | analyze → refactor → test |
 
 ### Project Templates
 
