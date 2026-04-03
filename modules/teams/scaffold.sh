@@ -22,6 +22,7 @@ Usage: scaffold-team.sh <template> [options]
 
 Templates:
   product-sdlc     8-agent full SDLC pipeline (discovery → spec → design → build → review → QA)
+  audit-sweep      8-agent audit pipeline (4 parallel auditors → triage → 2 fixers → verifier)
   fullstack-api    6-agent API build team (architect, backend, frontend, test, docs)
   code-review      3-agent review pipeline (security, quality)
   docs-sprint      4-agent documentation team (API, guides, architecture)
