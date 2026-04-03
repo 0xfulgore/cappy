@@ -21,12 +21,20 @@ usage() {
 Usage: scaffold-team.sh <template> [options]
 
 Templates:
-  product-sdlc     8-agent full SDLC pipeline (discovery → spec → design → build → review → QA)
-  audit-sweep      8-agent audit pipeline (4 parallel auditors → triage → 2 fixers → verifier)
-  fullstack-api    6-agent API build team (architect, backend, frontend, test, docs)
-  code-review      3-agent review pipeline (security, quality)
-  docs-sprint      4-agent documentation team (API, guides, architecture)
-  refactor-squad   5-agent refactoring team (analyzer, 2 refactors, test guardian)
+  product-sdlc       8-agent full SDLC pipeline (discovery → spec → design → build → review → QA)
+  audit-sweep        8-agent audit pipeline (4 parallel auditors → triage → 2 fixers → verifier)
+  migration-squad    6-agent database migration pipeline (analyze → design → migrate → validate → rollback test)
+  perf-clinic        5-agent performance optimization (profile → plan → optimize backend+frontend → validate)
+  test-factory       5-agent test coverage pipeline (analyze gaps → plan → write unit+integration+e2e → validate)
+  dependency-upgrade 5-agent dependency upgrade pipeline (scan → plan → upgrade → compatibility test)
+  incident-responder 5-agent incident response (reproduce → root cause → hotfix → post-mortem)
+  onboarding-guide   5-agent codebase onboarding (map → document architecture → trace flows → write guide)
+  api-versioning     5-agent API versioning (analyze contracts → design v2 → build migration path → update clients)
+  monorepo-splitter  5-agent monorepo extraction (map deps → define boundaries → extract → update CI/CD)
+  fullstack-api      6-agent API build team (architect, backend, frontend, test, docs)
+  code-review        3-agent review pipeline (security, quality)
+  docs-sprint        4-agent documentation team (API, guides, architecture)
+  refactor-squad     5-agent refactoring team (analyzer, 2 refactors, test guardian)
 
 Options:
   --name NAME        Team name (required)
