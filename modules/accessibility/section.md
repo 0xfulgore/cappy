@@ -1,7 +1,7 @@
 <!-- cappy:section:accessibility -->
 ## Accessibility Standards
 
-14. ACCESSIBLE BY DEFAULT: All UI code must meet WCAG 2.2 AA. This is not optional and not a follow-up task — it ships with the feature.
+17. ACCESSIBLE BY DEFAULT: All UI code must meet WCAG 2.2 AA. This is not optional and not a follow-up task — it ships with the feature.
 
 ### Requirements
 - **Keyboard navigation**: Every interactive element must be reachable and operable via keyboard. Tab order must be logical. Focus indicators must be visible.

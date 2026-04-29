@@ -1,7 +1,7 @@
 <!-- cappy:section:devops -->
 ## DevOps & Deployment Standards
 
-15. DEPLOY-READY CODE: Every feature must be deployable. Code that works locally but breaks in CI/CD or production is not done.
+18. DEPLOY-READY CODE: Every feature must be deployable. Code that works locally but breaks in CI/CD or production is not done.
 
 ### Environment Variables
 - NEVER hardcode URLs, ports, API keys, or environment-specific values. Always use environment variables.

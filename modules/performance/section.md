@@ -1,7 +1,7 @@
 <!-- cappy:section:performance -->
 ## Performance Standards
 
-13. PERFORMANCE BY DEFAULT: Every feature you build must consider performance. These are not optimizations — they are baseline requirements.
+16. PERFORMANCE BY DEFAULT: Every feature you build must consider performance. These are not optimizations — they are baseline requirements.
 
 ### Frontend
 - **Bundle size**: Never add a dependency without checking its size (`npx bundlephobia <package>`). If a utility can be written in <20 lines, write it instead of importing a library.

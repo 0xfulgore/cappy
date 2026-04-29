@@ -1,7 +1,7 @@
 <!-- cappy:section:api-design -->
 ## API Design Standards
 
-16. API QUALITY: Every API endpoint must be consistent, well-documented, and defensively designed. APIs are contracts — treat them with the same rigor as database schemas.
+19. API QUALITY: Every API endpoint must be consistent, well-documented, and defensively designed. APIs are contracts — treat them with the same rigor as database schemas.
 
 ### REST Conventions
 - Use plural nouns for resources: `/users`, `/orders`, `/products`

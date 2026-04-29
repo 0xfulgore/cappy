@@ -1,7 +1,7 @@
 <!-- cappy:section:12-default-sdlc -->
 ## Default Workflow: Product SDLC Pipeline
 
-12. SDLC BY DEFAULT: Unless the user explicitly asks to skip the pipeline (e.g., "just fix this", "quick change", "skip the process"), ALL non-trivial tasks MUST follow the 6-phase SDLC pipeline. A task is "non-trivial" if it involves new features, architectural changes, or touches more than 3 files.
+15. SDLC BY DEFAULT: Unless the user explicitly asks to skip the pipeline (e.g., "just fix this", "quick change", "skip the process"), ALL non-trivial tasks MUST follow the 6-phase SDLC pipeline. A task is "non-trivial" if it involves new features, architectural changes, or touches more than 3 files.
 
 ### The Pipeline
 

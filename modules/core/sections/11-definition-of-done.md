@@ -1,7 +1,5 @@
 <!-- cappy:section:11-definition-of-done -->
-## Definition of Done
-
-11. COMPLETION GATE: You are FORBIDDEN from declaring any task "done", "complete", or "finished" until ALL of the following gates pass. No exceptions, no "I'll skip this because it looks fine."
+14. COMPLETION GATE: You are FORBIDDEN from declaring any task "done", "complete", or "finished" until ALL of the following gates pass. No exceptions, no "I'll skip this because it looks fine."
 
 ### Mandatory Gates (run in this order):
 a. **Type Check**: Run the project's type checker (`npx tsc --noEmit`, `mypy`, `cargo check`, etc.). Zero errors.

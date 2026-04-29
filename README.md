@@ -22,7 +22,7 @@ The installer asks where your projects live (e.g., `~/Development`), installs a 
 
 | Module | Description |
 |--------|-------------|
-| **core** | SDLC pipeline + 12 mechanical overrides — the engine that drives everything |
+| **core** | SDLC pipeline + 15 mechanical overrides — the engine that drives everything |
 | **statusline** | Animated status bar: model, context %, git, task progress, cost, ETA |
 | **settings** | settings.json presets — power-user, cautious, team-lead |
 | **hooks** | Post-edit typecheck, auto-lint, pre-commit gate, file guard |
@@ -59,20 +59,23 @@ cd cappy
 
 ### Core: CLAUDE.md Mechanical Overrides
 
-12 composable rules that make Claude Code produce production-grade code:
+15 composable rules that make Claude Code produce production-grade code:
 
-1. **Step 0 Cleanup** — Remove dead code before refactoring
-2. **Phased Execution** — Max 5 files per phase, verify between phases
-3. **Senior Dev Override** — Fix architectural flaws, don't just follow orders
-4. **Forced Verification** — Must run type-check + lint before declaring done
-5. **Sub-Agent Swarming** — Parallel agents for tasks >5 files
-6. **Context Decay Awareness** — Re-read files after 10+ messages
-7. **File Read Budget** — 2000 line cap, chunk large files
-8. **Tool Result Blindness** — Detect truncated results, narrow scope
-9. **Edit Integrity** — Read before/after every edit, verify changes applied
-10. **No Semantic Search** — Grep isn't AST; search all reference types separately
-11. **Definition of Done** — Type-check, lint, test, build, coverage gates must ALL pass
-12. **SDLC by Default** — All non-trivial tasks follow the 6-phase pipeline (discovery → spec → design → build → review → validate) with user approval gates. Skip with "just do it"
+1. **Evidence Before Explanation** — First action must be a tool call gathering evidence; no causal claims without citations
+2. **Step 0 Cleanup** — Remove dead code before refactoring
+3. **Phased Execution** — Max 5 files per phase, verify between phases
+4. **Senior Dev Override** — Fix architectural flaws, don't just follow orders
+5. **Fix As You Go** — Broken thing found mid-task gets fixed immediately, no defer lists
+6. **Forced Verification** — Must run type-check + lint before declaring done
+7. **Sub-Agent Swarming** — Parallel agents for tasks >5 files
+8. **Context Decay Awareness** — Re-read files after 10+ messages
+9. **File Read Budget** — 2000 line cap, chunk large files
+10. **Tool Result Blindness** — Detect truncated results, narrow scope
+11. **Edit Integrity** — Read before/after every edit, verify changes applied
+12. **No Semantic Search** — Grep isn't AST; search all reference types separately
+13. **Verify Before Claiming Done** — Read actual output yourself; never trust "agent said done"
+14. **Definition of Done** — Type-check, lint, test, build, coverage gates must ALL pass
+15. **SDLC by Default** — All non-trivial tasks follow the 6-phase pipeline (discovery → spec → design → build → review → validate) with user approval gates. Skip with "just do it"
 
 ### Statusline
 

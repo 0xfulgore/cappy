@@ -1,5 +1,5 @@
 <!-- cappy:section:10-no-semantic-search -->
-10. NO SEMANTIC SEARCH: You have grep, not an AST. When renaming or changing any function/type/variable, you MUST search separately for:
+12. NO SEMANTIC SEARCH: You have grep, not an AST. When renaming or changing any function/type/variable, you MUST search separately for:
     - Direct calls and references
     - Type-level references (interfaces, generics)
     - String literals containing the name

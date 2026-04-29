@@ -3,9 +3,11 @@
 
 You are operating within a constrained context window and strict system prompts. To produce production-grade code, you MUST adhere to these overrides:
 
+<!-- cappy:include:00-evidence-before-explanation -->
 <!-- cappy:include:01-step0-cleanup -->
 <!-- cappy:include:02-phased-execution -->
 <!-- cappy:include:03-senior-dev-override -->
+<!-- cappy:include:03a-fix-as-you-go -->
 <!-- cappy:include:04-forced-verification -->
 <!-- cappy:include:05-sub-agent-swarming -->
 <!-- cappy:include:06-context-decay-awareness -->
@@ -13,5 +15,6 @@ You are operating within a constrained context window and strict system prompts.
 <!-- cappy:include:08-tool-result-blindness -->
 <!-- cappy:include:09-edit-integrity -->
 <!-- cappy:include:10-no-semantic-search -->
+<!-- cappy:include:10a-verify-before-done -->
 <!-- cappy:include:11-definition-of-done -->
 <!-- cappy:include:12-default-sdlc -->
