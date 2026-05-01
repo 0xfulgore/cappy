@@ -1,0 +1,36 @@
+{
+  "name": "hedge-detector",
+  "version": "1.0.0",
+  "description": "Stop hook that rejects hedging language (probably / I think / seems / could be) in assistant output",
+  "requires": [],
+  "conflicts": [],
+  "files": [
+    {
+      "source": "hedge-rejector.mjs",
+      "target": "~/.claude/hooks/hedge-rejector.mjs",
+      "mode": "0755"
+    },
+    {
+      "source": "lib/hedge-detection.mjs",
+      "target": "~/.claude/hooks/lib/hedge-detection.mjs",
+      "mode": "0644"
+    }
+  ],
+  "settings_merge": {
+    "hooks": {
+      "Stop": [
+        {
+          "matcher": "",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "node ~/.claude/hooks/hedge-rejector.mjs"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "install_type": "files",
+  "post_install": null
+}
