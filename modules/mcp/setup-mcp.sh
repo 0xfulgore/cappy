@@ -30,14 +30,40 @@ fi
 
 setup_server() {
   local config_file="$1"
-  local name desc
+  local name desc transport url
   name=$(jq -r '.name' "$config_file")
   desc=$(jq -r '.description' "$config_file")
+  transport=$(jq -r '.transport // "stdio"' "$config_file")
+  url=$(jq -r '.url // ""' "$config_file")
+
+  local server_id
+  server_id=$(basename "$config_file" .json)
 
   printf "\n━━ %s\n" "$name"
   printf "   %s\n\n" "$desc"
 
-  # Collect environment variables
+  # Skip if already installed
+  if claude mcp list 2>/dev/null | grep -q "^${server_id}[[:space:]:]"; then
+    log_info "$name already configured — skipping (run 'claude mcp remove $server_id' to reinstall)"
+    return 0
+  fi
+
+  # Remote transports (sse/http) — no env vars, OAuth handled in browser on first use
+  if [[ "$transport" == "sse" || "$transport" == "http" ]]; then
+    if [[ -z "$url" ]]; then
+      log_error "$name: transport=$transport requires a .url field in the config"
+      return 1
+    fi
+    log_info "Adding $name (transport: $transport)"
+    if claude mcp add --transport "$transport" "$server_id" "$url" 2>&1; then
+      log_success "$name configured. First use will open a browser for OAuth."
+    else
+      log_warn "$name setup may have failed — check 'claude mcp list'"
+    fi
+    return 0
+  fi
+
+  # Local stdio transport — collect env vars and shell out to npx
   local env_args=()
   local env_keys
   env_keys=$(jq -r '.env_vars | keys[]' "$config_file" 2>/dev/null)
@@ -69,13 +95,6 @@ setup_server() {
       env_args+=("-e" "$key")
     fi
   done
-
-  # Build and run the claude mcp add command
-  local server_id
-  server_id=$(basename "$config_file" .json)
-
-  local args
-  args=$(jq -r '.args | join(" ")' "$config_file")
 
   log_info "Adding $name to Claude Code..."
 

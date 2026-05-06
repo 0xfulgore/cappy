@@ -265,13 +265,14 @@ select_mcp_servers() {
   (( !has_mcp )) && return
 
   if [[ "${CAPPY_NON_INTERACTIVE:-}" == "1" ]]; then
-    CAPPY_MCP_SERVERS="github,postgres,playwright"
+    CAPPY_MCP_SERVERS="github,linear,postgres,playwright"
     export CAPPY_MCP_SERVERS
     return
   fi
 
   local descriptions=(
     "GitHub     — PR/issue management, code search"
+    "Linear     — Ticket claim/transition/comment (OAuth via browser)"
     "PostgreSQL — Database queries and exploration"
     "Playwright — Browser automation and testing"
   )
@@ -280,7 +281,7 @@ select_mcp_servers() {
   local selected
   selected=$(prompt_multiselect "Select MCP servers to configure:" "${descriptions[@]}")
 
-  local servers=("github" "postgres" "playwright")
+  local servers=("github" "linear" "postgres" "playwright")
   local chosen=()
   while IFS= read -r idx; do
     [[ -n "$idx" ]] && chosen+=("${servers[$idx]}")

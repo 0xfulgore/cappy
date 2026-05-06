@@ -1,0 +1,8 @@
+{
+  "name": "Linear MCP Server",
+  "description": "Linear ticket management — claim, transition, comment on issues. OAuth in browser.",
+  "transport": "sse",
+  "url": "https://mcp.linear.app/sse",
+  "auth": "oauth",
+  "env_vars": {}
+}
