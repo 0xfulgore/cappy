@@ -117,6 +117,7 @@ select_modules() {
     "accessibility"
     "devops"
     "api-design"
+    "ruflo"
   )
 
   if [[ -n "$CAPPY_SELECTED_MODULES" ]]; then
@@ -144,6 +145,7 @@ select_modules() {
     "accessibility  WCAG 2.2 AA: keyboard nav, screen readers, contrast"
     "devops         CI/CD awareness, env var safety, Docker, migrations"
     "api-design     REST conventions, validation, pagination, error handling"
+    "ruflo          Ruflo agent platform: marketplace + 8 plugins + MCP server"
   )
 
   local selected

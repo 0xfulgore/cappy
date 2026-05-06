@@ -1,0 +1,11 @@
+{
+  "name": "ruflo",
+  "version": "1.0.0",
+  "description": "Ruflo agent platform: marketplace, 8 plugins, and MCP server",
+  "requires": [],
+  "conflicts": [],
+  "files": [],
+  "install_type": "files",
+  "settings_merge": {},
+  "post_install": "bash setup-ruflo.sh"
+}
