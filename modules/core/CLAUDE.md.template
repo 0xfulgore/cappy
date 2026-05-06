@@ -9,6 +9,7 @@ You are operating within a constrained context window and strict system prompts.
 <!-- cappy:include:03-senior-dev-override -->
 <!-- cappy:include:03a-fix-as-you-go -->
 <!-- cappy:include:04-forced-verification -->
+<!-- cappy:include:04a-linear-ticket-workflow -->
 <!-- cappy:include:05-sub-agent-swarming -->
 <!-- cappy:include:05b-ruflo-swarms -->
 <!-- cappy:include:06-context-decay-awareness -->
