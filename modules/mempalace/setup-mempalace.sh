@@ -221,6 +221,184 @@ ensure_mcp() {
   fi
 }
 
+# ── Per-project init / mine ─────────────────────────────────
+# Resolve the mempalace CLI even if PATH isn't refreshed yet
+mempalace_cmd() {
+  if command -v mempalace &>/dev/null; then
+    echo "mempalace"
+  elif [[ -x "${HOME}/.local/bin/mempalace" ]]; then
+    echo "${HOME}/.local/bin/mempalace"
+  else
+    echo ""
+  fi
+}
+
+palace_initialized() {
+  # Two independent signals — either is sufficient.
+  #   1. .mempalace/ directory exists in the project root
+  #   2. `mempalace status` exits 0 when run from inside the project
+  local cmd="$1" dir="$2"
+  if [[ -d "${dir}/.mempalace" ]]; then
+    return 0
+  fi
+  ( cd "$dir" && "$cmd" status >/dev/null 2>&1 )
+}
+
+palace_has_been_mined() {
+  # Heuristic: any non-zero drawer / memory / document / chunk count in `status`.
+  # If the format changes upstream, we err on the side of "not mined" and ask.
+  local cmd="$1" dir="$2"
+  local out
+  out=$( cd "$dir" && "$cmd" status 2>/dev/null ) || return 1
+  echo "$out" | grep -qiE '(drawer|memor(y|ies)|document|chunk|entry|entries)[s]?[[:space:]]*[:=][[:space:]]*[1-9]'
+}
+
+# Find candidate project dirs (top-level subdirs that look like git repos)
+discover_project_candidates() {
+  local roots=()
+
+  # Honour the CLAUDE.md target the user picked in the main installer
+  if [[ -n "${CAPPY_CLAUDE_MD_TARGET:-}" ]]; then
+    local md_dir
+    md_dir=$(dirname "$CAPPY_CLAUDE_MD_TARGET")
+    [[ -d "$md_dir" ]] && roots+=("$md_dir")
+  fi
+
+  # Common dev roots
+  for candidate in "$HOME/Development" "$HOME/dev" "$HOME/projects" "$HOME/code" "$HOME/src" "$HOME/workspace"; do
+    [[ -d "$candidate" ]] && roots+=("$candidate")
+  done
+
+  # De-dupe and emit subdir candidates
+  local seen_roots="" seen_dirs=""
+  for root in "${roots[@]}"; do
+    [[ ":$seen_roots:" == *":$root:"* ]] && continue
+    seen_roots="$seen_roots:$root"
+    while IFS= read -r dir; do
+      [[ -z "$dir" ]] && continue
+      [[ ":$seen_dirs:" == *":$dir:"* ]] && continue
+      seen_dirs="$seen_dirs:$dir"
+      echo "$dir"
+    done < <(find "$root" -mindepth 1 -maxdepth 2 -name .git -type d 2>/dev/null \
+              | sed 's|/\.git$||' | sort)
+  done
+}
+
+prompt_init_projects() {
+  if [[ "${CAPPY_NON_INTERACTIVE:-}" == "1" ]]; then
+    log_info "Non-interactive mode — skipping per-project init prompt"
+    return 0
+  fi
+
+  local cmd
+  cmd="$(mempalace_cmd)"
+  if [[ -z "$cmd" ]]; then
+    log_warn "mempalace CLI not on PATH yet — skipping init prompt. Restart your shell and run 'mempalace init --yes <project>' manually."
+    return 0
+  fi
+
+  if ! prompt_yn "Initialize a MemPalace for any of your projects now?" "y"; then
+    return 0
+  fi
+
+  # Build candidate list
+  local -a candidates=()
+  while IFS= read -r line; do
+    [[ -n "$line" ]] && candidates+=("$line")
+  done < <(discover_project_candidates)
+
+  # Decide between multiselect (auto-detected) and free-form path entry
+  local -a chosen=()
+  if (( ${#candidates[@]} == 0 )); then
+    log_info "No git repos auto-detected under common dev roots."
+    printf "Enter project paths to initialize (space-separated, ~ allowed), or blank to skip:\n  " >&2
+    local raw
+    read -r raw
+    for p in $raw; do
+      p="${p/#\~/$HOME}"
+      [[ -d "$p" ]] && chosen+=("$p") || log_warn "Skipping '$p' — not a directory"
+    done
+  else
+    # Annotate state per project: init'd? mined?
+    local -a labels=()
+    for dir in "${candidates[@]}"; do
+      local tag=""
+      if palace_initialized "$cmd" "$dir"; then
+        if palace_has_been_mined "$cmd" "$dir"; then
+          tag="  [init'd + mined — will skip both]"
+        else
+          tag="  [already initialized — will skip init]"
+        fi
+      fi
+      labels+=("$(basename "$dir")${tag}   ($dir)")
+    done
+    labels+=("Custom path…")
+
+    local sel_idx
+    while IFS= read -r sel_idx; do
+      [[ -z "$sel_idx" ]] && continue
+      if (( sel_idx == ${#candidates[@]} )); then
+        printf "  Enter custom path: " >&2
+        local p
+        read -r p
+        p="${p/#\~/$HOME}"
+        [[ -d "$p" ]] && chosen+=("$p") || log_warn "Skipping '$p' — not a directory"
+      else
+        chosen+=("${candidates[$sel_idx]}")
+      fi
+    done < <(prompt_multiselect "Select projects to initialize:" "${labels[@]}")
+  fi
+
+  if (( ${#chosen[@]} == 0 )); then
+    log_info "No projects selected — skipping init."
+    return 0
+  fi
+
+  local mine_after=0
+  prompt_yn "Also run 'mempalace mine' on each to index its files?" "y" && mine_after=1
+
+  for dir in "${chosen[@]}"; do
+    local name
+    name=$(basename "$dir")
+
+    if palace_initialized "$cmd" "$dir"; then
+      log_info "$name: palace already exists — skipping init"
+    else
+      log_info "Initializing palace in $dir ..."
+      if ( cd "$dir" && "$cmd" init --yes . >/dev/null 2>&1 ); then
+        log_success "Initialized: $dir"
+      else
+        log_warn "init failed for $dir — try manually: cd '$dir' && mempalace init --yes ."
+        continue
+      fi
+    fi
+
+    if (( mine_after )); then
+      if palace_has_been_mined "$cmd" "$dir"; then
+        log_info "$name: already mined — skipping (delete .mempalace/ and re-run to force a re-mine)"
+        continue
+      fi
+      log_info "Mining $dir (this can take a while on large repos)..."
+      if ( cd "$dir" && "$cmd" mine . >/dev/null 2>&1 ); then
+        log_success "Mined: $dir"
+      else
+        log_warn "mine failed for $dir — try manually: cd '$dir' && mempalace mine ."
+      fi
+    fi
+  done
+
+  # Optional: ingest Claude Code transcripts globally
+  if [[ -d "${HOME}/.claude/projects" ]] && \
+     prompt_yn "Also mine your Claude Code conversation transcripts (~/.claude/projects, can be slow)?" "n"; then
+    log_info "Mining ~/.claude/projects in convos mode..."
+    if "$cmd" mine "${HOME}/.claude/projects" --mode convos >/dev/null 2>&1; then
+      log_success "Mined Claude Code transcripts"
+    else
+      log_warn "convo mine failed — try manually: mempalace mine ~/.claude/projects --mode convos"
+    fi
+  fi
+}
+
 # ── Per-project usage hints ─────────────────────────────────
 print_next_steps() {
   local cyan="$(tput setaf 6 2>/dev/null || true)"
@@ -229,9 +407,8 @@ print_next_steps() {
 
   cat <<EOF
 
-  ${bold}MemPalace is per-project.${rst} Run these inside each repo you want indexed:
+  ${bold}MemPalace usage cheatsheet${rst} (per-project — run inside each repo):
 
-    ${cyan}cd ~/Development/your-project${rst}
     ${cyan}mempalace init --yes .${rst}                       # create palace for this project
     ${cyan}mempalace mine .${rst}                             # index project files
     ${cyan}mempalace mine ~/.claude/projects --mode convos${rst}  # index Claude Code transcripts
@@ -249,6 +426,7 @@ main() {
   log_info "MemPalace setup — installing only what's missing"
   ensure_package || { log_error "MemPalace package install failed — aborting"; exit 1; }
   ensure_mcp || true
+  prompt_init_projects || true
   log_success "MemPalace setup complete"
   print_next_steps
 }
