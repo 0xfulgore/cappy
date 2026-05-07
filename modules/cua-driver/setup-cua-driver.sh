@@ -14,11 +14,20 @@
 
 set -euo pipefail
 
-if ! type log_info >/dev/null 2>&1; then
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [[ -f "${SCRIPT_DIR}/../../lib/common.sh" ]]; then
+  # shellcheck source=../../lib/common.sh
+  source "${SCRIPT_DIR}/../../lib/common.sh"
+else
+  # Standalone fallback (common.sh missing — testing this script
+  # directly outside the cappy install flow). Always default "no" on
+  # prompts so we never block on a missing dependency.
   log_info()    { printf '[info] %s\n' "$*"; }
   log_success() { printf '[ ok] %s\n' "$*"; }
   log_warn()    { printf '[warn] %s\n' "$*" >&2; }
   log_error()   { printf '[err]  %s\n' "$*" >&2; }
+  prompt_yn()   { return 1; }
 fi
 
 # macOS-only. On other OSes, log and exit cleanly so the rest of the
@@ -68,9 +77,62 @@ else
   log_info "  claude mcp add --transport stdio cua-driver -- cua-driver mcp"
 fi
 
-# ── Permissions reminder ───────────────────────────────────
+# ── Permissions: trigger the macOS dialogs ──────────────────
+# cua-driver needs Accessibility + Screen Recording before it can do
+# anything useful. The system only raises the dialogs when an app
+# actually tries to use the APIs — `open … CuaDriver --args serve`
+# does that. Then `check_permissions` confirms the grants stuck.
+#
+# We offer to do this for the user instead of just printing a reminder
+# they'll skim past. Skip the prompt under --non-interactive.
 printf '\n'
 log_info "cua-driver needs macOS permissions before first use:"
 log_info "  • Accessibility (System Settings → Privacy & Security → Accessibility)"
 log_info "  • Screen Recording (System Settings → Privacy & Security → Screen Recording)"
-log_info "Trigger system prompts with: cua-driver check_permissions"
+
+if [[ "${CAPPY_NON_INTERACTIVE:-}" == "1" ]]; then
+  log_info "Non-interactive mode — skipping permission prompt."
+  log_info "Trigger the system dialogs later with:"
+  log_info "  open -n -g -a CuaDriver --args serve"
+  log_info "  cua-driver check_permissions"
+  exit 0
+fi
+
+if ! prompt_yn "Open the macOS permission dialogs now?" "y"; then
+  log_info "Skipped. Trigger them later with:"
+  log_info "  open -n -g -a CuaDriver --args serve"
+  log_info "  cua-driver check_permissions"
+  exit 0
+fi
+
+# Launch CuaDriver in the background so the macOS API calls fire and
+# the system raises Accessibility + Screen Recording dialogs. -g keeps
+# focus in the terminal; -n forces a fresh instance.
+log_info "Launching CuaDriver to raise permission dialogs..."
+if ! open -n -g -a CuaDriver --args serve 2>/dev/null; then
+  log_warn "Could not launch CuaDriver via 'open -a' — the app may not be installed yet."
+  log_info "Run manually after installation completes:"
+  log_info "  open -n -g -a CuaDriver --args serve"
+  log_info "  cua-driver check_permissions"
+  exit 0
+fi
+
+log_info "Grant Accessibility + Screen Recording in the system dialogs."
+log_info "Press Enter once you've granted both, or Ctrl+C to skip verification."
+read -r _ || true
+
+# Confirm. cua-driver check_permissions returns non-zero if anything
+# is still missing, which is fine — we surface it instead of failing
+# the install.
+if command -v cua-driver >/dev/null 2>&1; then
+  log_info "Verifying permissions with: cua-driver check_permissions"
+  if cua-driver check_permissions; then
+    log_success "cua-driver permissions confirmed"
+  else
+    log_warn "Some permissions are still missing — re-run check after granting:"
+    log_warn "  cua-driver check_permissions"
+  fi
+else
+  log_warn "cua-driver CLI not on PATH yet — restart your shell, then:"
+  log_warn "  cua-driver check_permissions"
+fi
