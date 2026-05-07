@@ -30,31 +30,49 @@ remote_url=$(git config --get remote.origin.url 2>/dev/null || true)
 branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)
 [[ -z "$branch" ]] && exit 0
 
-upstream=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo "origin/$branch")
-upstream_branch="${upstream#*/}"
-
-remote_sha=$(git ls-remote --quiet "$remote_url" "refs/heads/$upstream_branch" 2>/dev/null | awk 'NR==1{print $1}')
-[[ -z "$remote_sha" ]] && exit 0
-
 local_sha=$(git rev-parse HEAD 2>/dev/null || true)
 [[ -z "$local_sha" ]] && exit 0
 
-behind=0
-available=false
-if [[ "$local_sha" != "$remote_sha" ]]; then
-  available=true
-  git fetch --quiet origin "$upstream_branch" 2>/dev/null || true
-  behind=$(git rev-list --count "HEAD..$remote_sha" 2>/dev/null || echo 0)
-  [[ -z "$behind" ]] && behind=0
+# ── Discover latest semver tag from remote ──────────────────
+# Filter to refs/tags/vX.Y.Z (or X.Y.Z), strip the prefix, sort -V.
+# If no tags exist yet, this is empty and we report "no release yet".
+latest_tag=$(git ls-remote --tags --refs "$remote_url" 2>/dev/null \
+  | awk '{print $2}' \
+  | sed 's|refs/tags/||' \
+  | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' \
+  | sort -V \
+  | tail -n 1 || true)
+
+# ── Discover installed version ───────────────────────────────
+# Prefer the version cappy actually installed (in installed.json) over
+# whatever's currently on disk in forge.json — those can diverge if the
+# repo was pulled but install.sh hasn't been re-run.
+installed_ver=""
+if [[ -f "$CAPPY_HOME/installed.json" ]] && command -v jq >/dev/null 2>&1; then
+  installed_ver=$(jq -r '.cappy_version // empty' "$CAPPY_HOME/installed.json" 2>/dev/null || true)
 fi
+if [[ -z "$installed_ver" || "$installed_ver" == "null" ]] && [[ -f "$CAPPY_REPO/forge.json" ]] && command -v jq >/dev/null 2>&1; then
+  installed_ver=$(jq -r '.version // "0.0.0"' "$CAPPY_REPO/forge.json" 2>/dev/null || echo "0.0.0")
+fi
+[[ -z "$installed_ver" || "$installed_ver" == "null" ]] && installed_ver="0.0.0"
+
+# ── Compare via sort -V ──────────────────────────────────────
+available=false
+inst_clean="${installed_ver#v}"
+latest_clean="${latest_tag#v}"
+if [[ -n "$latest_clean" && "$inst_clean" != "$latest_clean" ]]; then
+  newer=$(printf '%s\n%s\n' "$inst_clean" "$latest_clean" | sort -V | tail -n 1)
+  [[ "$newer" == "$latest_clean" ]] && available=true
+fi
+
+# ── Optional: also fetch upstream SHA for diagnostics ───────
+remote_sha=""
+upstream=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo "origin/$branch")
+upstream_branch="${upstream#*/}"
+remote_sha=$(git ls-remote --quiet "$remote_url" "refs/heads/$upstream_branch" 2>/dev/null | awk 'NR==1{print $1}' || true)
 
 dirty=false
 [[ -n "$(git status --porcelain 2>/dev/null | head -1)" ]] && dirty=true
-
-ver="?"
-if [[ -f "$CAPPY_REPO/forge.json" ]] && command -v jq >/dev/null 2>&1; then
-  ver=$(jq -r '.version // "?"' "$CAPPY_REPO/forge.json" 2>/dev/null || echo "?")
-fi
 
 ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
@@ -63,12 +81,12 @@ tmp="$STATUS_FILE.tmp.$$"
 cat > "$tmp" <<EOF
 {
   "checked_at": "$ts",
-  "current_sha": "$local_sha",
-  "latest_sha": "$remote_sha",
-  "behind_count": $behind,
+  "installed_version": "$installed_ver",
+  "latest_version": "${latest_tag:-}",
   "available": $available,
+  "current_sha": "$local_sha",
+  "latest_sha": "${remote_sha:-}",
   "dirty": $dirty,
-  "version": "$ver",
   "branch": "$branch",
   "remote_url": "$remote_url"
 }

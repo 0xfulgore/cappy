@@ -1,0 +1,243 @@
+#!/usr/bin/env bash
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# release.sh — bump version, tag, and push
+#
+# Usage:
+#   ./release.sh patch              # 1.0.0 → 1.0.1
+#   ./release.sh minor              # 1.0.0 → 1.1.0
+#   ./release.sh major              # 1.0.0 → 2.0.0
+#   ./release.sh 1.2.3              # explicit version
+#   ./release.sh patch --dry-run    # show what would happen
+#   ./release.sh patch --no-push    # tag locally, don't push
+#   ./release.sh patch --gh         # also `gh release create`
+#
+# Versioning policy (semver):
+#   MAJOR — breaking changes (module removed, incompatible config)
+#   MINOR — new modules / features, backward-compatible
+#   PATCH — bug fixes, docs, internal cleanups
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")"
+
+if [[ ! -f forge.json ]]; then
+  printf '[err]  not in cappy repo (no forge.json here)\n' >&2
+  exit 1
+fi
+if ! command -v jq >/dev/null 2>&1; then
+  printf '[err]  jq is required\n' >&2
+  exit 1
+fi
+if ! command -v git >/dev/null 2>&1; then
+  printf '[err]  git is required\n' >&2
+  exit 1
+fi
+
+# ── ANSI ─────────────────────────────────────────────────────
+if [[ -t 1 ]]; then
+  RST=$'\e[0m'; BOLD=$'\e[1m'; DIM=$'\e[2m'
+  RED=$'\e[31m'; GREEN=$'\e[32m'; YELLOW=$'\e[33m'; CYAN=$'\e[36m'
+  BRIGHT_CYAN=$'\e[96m'; BRIGHT_MAGENTA=$'\e[95m'
+else
+  RST=""; BOLD=""; DIM=""; RED=""; GREEN=""; YELLOW=""; CYAN=""
+  BRIGHT_CYAN=""; BRIGHT_MAGENTA=""
+fi
+
+err()  { printf '%s[err]%s  %s\n' "$RED" "$RST" "$*" >&2; }
+ok()   { printf '%s[ ok]%s  %s\n' "$GREEN" "$RST" "$*"; }
+info() { printf '%s[info]%s %s\n' "$CYAN" "$RST" "$*"; }
+warn() { printf '%s[warn]%s %s\n' "$YELLOW" "$RST" "$*"; }
+step() { printf '\n%s━━ %s%s\n' "$BRIGHT_CYAN" "$*" "$RST"; }
+
+# ── Parse args ───────────────────────────────────────────────
+DRY_RUN=0
+PUSH=1
+GH=0
+BUMP=""
+
+usage() {
+  sed -n '/^# Usage:/,/^# ━/p' "$0" | sed 's/^# //; s/^#//; s/^━.*//'
+}
+
+while (( $# )); do
+  case "$1" in
+    --dry-run) DRY_RUN=1 ;;
+    --no-push) PUSH=0 ;;
+    --gh)      GH=1 ;;
+    -h|--help) usage; exit 0 ;;
+    major|minor|patch) BUMP="$1" ;;
+    [0-9]*.[0-9]*.[0-9]*) BUMP="$1" ;;
+    *) err "unknown arg: $1"; usage; exit 2 ;;
+  esac
+  shift
+done
+
+if [[ -z "$BUMP" ]]; then
+  err "missing bump arg (major|minor|patch|X.Y.Z)"
+  usage
+  exit 2
+fi
+
+# ── Preflight: clean tree + on main ──────────────────────────
+if [[ -n "$(git status --porcelain)" ]]; then
+  err "working tree dirty — commit or stash before releasing:"
+  git status --short >&2
+  exit 3
+fi
+
+branch=$(git rev-parse --abbrev-ref HEAD)
+if [[ "$branch" != "main" ]]; then
+  warn "not on main (current: $branch)"
+  printf "Continue anyway? [y/N] "
+  read -r ans
+  case "$ans" in
+    [Yy]|[Yy][Ee][Ss]) ;;
+    *) info "aborted"; exit 4 ;;
+  esac
+fi
+
+step "Fetching tags"
+git fetch --tags --quiet
+
+# ── Compute new version ──────────────────────────────────────
+current=$(jq -r '.version' forge.json)
+if [[ -z "$current" || "$current" == "null" ]]; then
+  err "could not read version from forge.json"
+  exit 5
+fi
+
+case "$BUMP" in
+  major|minor|patch)
+    if ! [[ "$current" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+      err "current version '$current' isn't valid semver — pass an explicit X.Y.Z"
+      exit 6
+    fi
+    maj=${BASH_REMATCH[1]}
+    min=${BASH_REMATCH[2]}
+    pat=${BASH_REMATCH[3]}
+    case "$BUMP" in
+      major) new="$((maj+1)).0.0" ;;
+      minor) new="${maj}.$((min+1)).0" ;;
+      patch) new="${maj}.${min}.$((pat+1))" ;;
+    esac
+    ;;
+  *) new="$BUMP" ;;
+esac
+
+if ! [[ "$new" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  err "computed version '$new' isn't valid semver"
+  exit 7
+fi
+
+tag="v${new}"
+
+# ── Tag collision? ───────────────────────────────────────────
+if git rev-parse --verify "refs/tags/$tag" >/dev/null 2>&1; then
+  err "tag $tag already exists locally"
+  exit 8
+fi
+if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+  err "tag $tag already exists on origin"
+  exit 9
+fi
+
+# ── Changelog (commits since last tag) ──────────────────────
+last_tag=$(git tag --sort=-v:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
+if [[ -n "$last_tag" ]]; then
+  commits=$(git log --pretty='format:- %s (%h)' "${last_tag}..HEAD")
+  range_label="since $last_tag"
+else
+  commits=$(git log --pretty='format:- %s (%h)')
+  range_label="full history"
+fi
+
+step "Release plan"
+printf '  %scurrent%s    %s\n' "$DIM" "$RST" "$current"
+printf '  %snew%s        %s%s%s%s\n' "$DIM" "$RST" "$BOLD" "$BRIGHT_MAGENTA" "$new" "$RST"
+printf '  %stag%s        %s\n' "$DIM" "$RST" "$tag"
+printf '  %slast tag%s   %s\n' "$DIM" "$RST" "${last_tag:-(none)}"
+printf '  %scommits%s    %s\n' "$DIM" "$RST" "$range_label"
+
+if [[ -n "$commits" ]]; then
+  printf '\n%s%sChangelog:%s\n' "$BOLD" "$BRIGHT_CYAN" "$RST"
+  printf '%s\n' "$commits" | head -30
+  total=$(printf '%s\n' "$commits" | wc -l | tr -d ' ')
+  if (( total > 30 )); then
+    printf '%s... (+%d more)%s\n' "$DIM" $((total-30)) "$RST"
+  fi
+else
+  warn "no commits since $last_tag — releasing anyway?"
+fi
+
+if (( DRY_RUN )); then
+  printf '\n%s[dry-run]%s would: bump forge.json, commit, tag %s, push%s\n' "$YELLOW" "$RST" "$tag" "$([[ $PUSH -eq 1 ]] && echo "" || echo " (skipped --no-push)")"
+  exit 0
+fi
+
+# ── Confirm ──────────────────────────────────────────────────
+printf '\nProceed? [y/N] '
+read -r ans
+case "$ans" in
+  [Yy]|[Yy][Ee][Ss]) ;;
+  *) info "aborted"; exit 0 ;;
+esac
+
+# ── Bump forge.json ──────────────────────────────────────────
+step "Bumping forge.json: $current → $new"
+tmp=$(mktemp)
+jq --arg v "$new" '.version = $v' forge.json > "$tmp"
+mv "$tmp" forge.json
+ok "forge.json updated"
+
+# ── Commit ───────────────────────────────────────────────────
+step "Committing"
+git add forge.json
+{
+  printf 'release: %s\n\n' "$tag"
+  if [[ -n "$commits" ]]; then
+    printf 'Changelog (%s):\n%s\n' "$range_label" "$commits"
+  fi
+} | git commit -F -
+ok "committed"
+
+# ── Tag ──────────────────────────────────────────────────────
+step "Tagging $tag (annotated)"
+{
+  printf 'Release %s\n\n' "$tag"
+  if [[ -n "$commits" ]]; then
+    printf '%s\n' "$commits"
+  fi
+} | git tag -a "$tag" -F -
+ok "tagged"
+
+# ── Push ─────────────────────────────────────────────────────
+if (( PUSH )); then
+  step "Pushing"
+  git push --quiet
+  git push --quiet origin "$tag"
+  ok "pushed commit and tag $tag"
+else
+  warn "--no-push: tag created locally"
+  info "push later with: git push && git push origin $tag"
+fi
+
+# ── GitHub release ───────────────────────────────────────────
+if (( GH )); then
+  if command -v gh >/dev/null 2>&1; then
+    step "Creating GitHub release"
+    if (( PUSH )); then
+      gh release create "$tag" --generate-notes --title "$tag"
+      ok "GitHub release created"
+    else
+      warn "skipping gh release — tag wasn't pushed"
+    fi
+  else
+    warn "gh CLI not found — skipping GitHub release"
+  fi
+fi
+
+step "Done"
+ok "released $tag"
+printf '\n%sUsers will see this update within 24h via the cappy statusline notifier.%s\n' "$DIM" "$RST"
+printf '%sTo verify: cappy check && cappy status%s\n\n' "$DIM" "$RST"

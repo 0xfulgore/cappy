@@ -183,16 +183,16 @@ if [ -x "$cappy_check_script" ]; then
   fi
   if [ -f "$cappy_status_file" ] && command -v jq >/dev/null 2>&1; then
     cappy_avail=$(jq -r '.available // false' "$cappy_status_file" 2>/dev/null)
-    cappy_behind=$(jq -r '.behind_count // 0' "$cappy_status_file" 2>/dev/null)
-    if [ "$cappy_avail" = "true" ]; then
+    cappy_latest=$(jq -r '.latest_version // ""' "$cappy_status_file" 2>/dev/null)
+    if [ "$cappy_avail" = "true" ] && [ -n "$cappy_latest" ]; then
       cappy_today=$(date +%Y-%m-%d)
-      cappy_notif="$HOME/.cappy/.notified-${cappy_today}"
+      cappy_notif="$HOME/.cappy/.notified-${cappy_today}-${cappy_latest}"
       if [ ! -f "$cappy_notif" ]; then
-        parts+=("${BRIGHT_CYAN}${BOLD}↑ cappy +${cappy_behind}${RST}")
+        parts+=("${BRIGHT_CYAN}${BOLD}↑ cappy ${cappy_latest}${RST}")
         touch "$cappy_notif" 2>/dev/null || true
         find "$HOME/.cappy" -maxdepth 1 -name '.notified-*' -mtime +2 -delete 2>/dev/null || true
       else
-        parts+=("${MAGENTA}↑ cappy +${cappy_behind}${RST}")
+        parts+=("${MAGENTA}↑ cappy ${cappy_latest}${RST}")
       fi
     fi
   fi

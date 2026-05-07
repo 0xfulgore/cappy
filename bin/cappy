@@ -131,28 +131,32 @@ cmd_status() {
     cat "$STATUS_FILE"
     return
   fi
-  local cur lat behind avail dirty ver checked branch
-  cur=$(jq -r '.current_sha[0:8] // "?"' "$STATUS_FILE")
-  lat=$(jq -r '.latest_sha[0:8] // "?"' "$STATUS_FILE")
-  behind=$(jq -r '.behind_count // 0' "$STATUS_FILE")
+  local installed latest avail dirty cur_sha checked branch
+  installed=$(jq -r '.installed_version // "?"' "$STATUS_FILE")
+  latest=$(jq -r '.latest_version // ""' "$STATUS_FILE")
   avail=$(jq -r '.available // false' "$STATUS_FILE")
   dirty=$(jq -r '.dirty // false' "$STATUS_FILE")
-  ver=$(jq -r '.version // "?"' "$STATUS_FILE")
+  cur_sha=$(jq -r '.current_sha[0:8] // "?"' "$STATUS_FILE")
   checked=$(jq -r '.checked_at // "?"' "$STATUS_FILE")
   branch=$(jq -r '.branch // "?"' "$STATUS_FILE")
 
   printf '\n'
-  printf '  %sversion%s   %s\n' "$DIM" "$RST" "$ver"
-  printf '  %sbranch%s    %s\n' "$DIM" "$RST" "$branch"
-  printf '  %scurrent%s   %s\n' "$DIM" "$RST" "$cur"
-  printf '  %slatest%s    %s\n' "$DIM" "$RST" "$lat"
-  printf '  %sbehind%s    %s\n' "$DIM" "$RST" "$behind"
-  printf '  %sdirty%s     %s\n' "$DIM" "$RST" "$dirty"
-  printf '  %schecked%s   %s\n' "$DIM" "$RST" "$checked"
+  printf '  %sinstalled%s   %s\n' "$DIM" "$RST" "$installed"
+  printf '  %slatest%s      %s\n' "$DIM" "$RST" "${latest:-(no release tagged yet)}"
+  printf '  %sbranch%s      %s\n' "$DIM" "$RST" "$branch"
+  printf '  %scurrent%s     %s (commit)\n' "$DIM" "$RST" "$cur_sha"
+  printf '  %sdirty%s       %s\n' "$DIM" "$RST" "$dirty"
+  printf '  %schecked%s     %s\n' "$DIM" "$RST" "$checked"
   if [[ "$avail" == "true" ]]; then
-    printf '\n  %s%s↑ update available%s — run: %s%scappy update%s\n\n' "$BRIGHT_CYAN" "$BOLD" "$RST" "$BOLD" "$BRIGHT_CYAN" "$RST"
+    printf '\n  %s%s↑ update available%s — %s%s%s → %s%s%s — run: %s%scappy update%s\n\n' \
+      "$BRIGHT_CYAN" "$BOLD" "$RST" \
+      "$DIM" "$installed" "$RST" \
+      "$BOLD" "$latest" "$RST" \
+      "$BOLD" "$BRIGHT_CYAN" "$RST"
+  elif [[ -z "$latest" ]]; then
+    printf '\n  %s· no release tagged yet (you are running %s on commit %s)%s\n\n' "$DIM" "$installed" "$cur_sha" "$RST"
   else
-    printf '\n  %s✓ up to date%s\n\n' "$GREEN" "$RST"
+    printf '\n  %s✓ up to date (%s)%s\n\n' "$GREEN" "$installed" "$RST"
   fi
 }
 

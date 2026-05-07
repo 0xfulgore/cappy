@@ -265,6 +265,41 @@ cappy uninstall
 
 This removes cappy-managed CLAUDE.md sections and hook files. Offers to restore from backup. Your settings.json is preserved (remove cappy entries manually if needed).
 
+## Versioning & Releases
+
+Cappy follows [semantic versioning](https://semver.org/). The auto-update notifier is **release-based** — only published tags trigger the `↑ cappy v1.2.3` segment in your statusline. Bug-fix commits between releases don't nag users until you cut a new tag.
+
+| Bump | When to use | Examples |
+|------|-------------|----------|
+| **MAJOR** (1.x.x → 2.0.0) | Breaking changes — module removed, incompatible config, user migration required | dropping bash 3.2 support, changing the CLAUDE.md marker format |
+| **MINOR** (1.0.x → 1.1.0) | New modules, new features, backward-compatible additions | the auto-update module, new agent template |
+| **PATCH** (1.0.0 → 1.0.1) | Bug fixes, docs, internal cleanups | the JSON merge fix, README updates |
+
+### Cutting a release (maintainer)
+
+```bash
+./release.sh patch              # 1.0.0 → 1.0.1
+./release.sh minor              # 1.0.0 → 1.1.0
+./release.sh major              # 1.0.0 → 2.0.0
+./release.sh 1.2.3              # explicit version
+./release.sh patch --dry-run    # preview
+./release.sh minor --gh         # also `gh release create`
+```
+
+What it does:
+1. Refuses to run on a dirty tree or off `main` (unless you confirm).
+2. Bumps `version` in `forge.json`.
+3. Collects commits since the last tag into a changelog block.
+4. Commits `release: vX.Y.Z` with the changelog in the body.
+5. Creates an annotated tag `vX.Y.Z`.
+6. Pushes the commit and the tag.
+7. Optionally `gh release create` with auto-generated notes.
+
+How users see the new release:
+- Within 24h, `lib/update-check.sh` queries `git ls-remote --tags`, finds the new highest semver tag, writes `available: true` to `~/.cappy/update-status.json`.
+- The statusline picks it up next render and shows `↑ cappy v1.2.3`.
+- `cappy update` pulls and reinstalls.
+
 ## How It Works
 
 - **Non-destructive**: Always backs up existing configs to `~/.claude/backups/cappy-<timestamp>/` before modifying
