@@ -20,11 +20,12 @@ The installer asks where your projects live (e.g., `~/Development`), installs a 
 
 ## What You Get
 
-16 modules; install all or pick a subset.
+17 modules; install all or pick a subset.
 
 | Module | Description |
 |--------|-------------|
 | **core** | SDLC pipeline + 18 mechanical overrides (15 numbered rules + Linear ticket workflow, Ruflo swarm preference, mandatory swarm-split threshold) — the engine that drives everything |
+| **auto-update** | `cappy` CLI shim + 24h-cadence update notifier in the statusline (see [The `cappy` command](#the-cappy-command)) |
 | **statusline** | Animated status bar: model, context %, git, task progress, cost, ETA |
 | **settings** | settings.json presets — power-user, cautious, team-lead |
 | **hooks** | Post-edit typecheck, auto-lint, pre-commit gate, file guard |
@@ -206,14 +207,36 @@ Templates: `react-nextjs`, `rust-api`, `python-ml`, `expo-mobile`, `generic-full
 | **cautious** | Read + Edit only | Disabled | Off | Bash restricted, secrets blocked |
 | **team-lead** | Full | Enabled | On | rm -rf blocked |
 
-## Updating
+## The `cappy` command
+
+The `auto-update` module installs a `cappy` CLI shim and a 24h-cadence update notifier in the statusline.
 
 ```bash
-~/.cappy/repo/update.sh
+cappy update           # interactive prompt, then `git pull` + reinstall
+cappy update --yes     # non-interactive
+cappy status           # local SHA, latest SHA, behind count, last-checked
+cappy check            # force a fresh remote check now (bypasses 24h cache)
+cappy version          # print installed cappy version
+cappy help             # show splash + usage
 ```
 
-Or from a cloned repo:
+**How notifications work:**
+- The statusline reads `~/.cappy/update-status.json`. If it's missing or older than 24 hours, it fires `lib/update-check.sh` async and detached so the prompt never blocks.
+- When an update is available, the statusline shows a `↑ cappy +N` segment (commits behind). The first sighting per day is bold; subsequent same-day renders are dimmer to avoid noise.
+- The check is a single `git ls-remote` (~200 ms) — no clone, no fetch unless you're actually behind.
+- Offline / network errors → silent, no statusline noise.
+
+**Where the binary lives:**
+- Shim: `~/.cappy/repo/bin/cappy` (the canonical path)
+- PATH symlink: `~/.local/bin/cappy` (created automatically only if `~/.local/bin` already exists; install never modifies your shell rc files)
+- If `~/.local/bin` isn't on your `$PATH`, run via the canonical path or add it yourself.
+
+## Updating (legacy)
+
+You can still run the bare scripts directly:
 ```bash
+~/.cappy/repo/update.sh
+# or:
 cd cappy && git pull && ./update.sh
 ```
 

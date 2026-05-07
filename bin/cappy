@@ -1,0 +1,186 @@
+#!/usr/bin/env bash
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# cappy — Claude Code power-user toolkit
+# https://github.com/0xfulgore/cappy
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+set -euo pipefail
+
+CAPPY_HOME="${CAPPY_HOME:-$HOME/.cappy}"
+CAPPY_REPO="${CAPPY_REPO:-$CAPPY_HOME/repo}"
+STATUS_FILE="$CAPPY_HOME/update-status.json"
+
+# ── ANSI: gate on TTY so pipes/scripts stay clean ────────────
+if [[ -t 1 ]]; then
+  RST=$'\e[0m'; DIM=$'\e[2m'; BOLD=$'\e[1m'
+  RED=$'\e[31m'; GREEN=$'\e[32m'; YELLOW=$'\e[33m'
+  CYAN=$'\e[36m'; MAGENTA=$'\e[35m'
+  BRIGHT_CYAN=$'\e[96m'; BRIGHT_YELLOW=$'\e[93m'
+  BRIGHT_MAGENTA=$'\e[95m'; BRIGHT_GREEN=$'\e[92m'
+  BROWN=$'\e[38;5;130m'; ORANGE=$'\e[38;5;208m'; TAN=$'\e[38;5;180m'
+  HAT_BAND=$'\e[38;5;94m'; STAR=$'\e[38;5;220m'
+else
+  RST=""; DIM=""; BOLD=""; RED=""; GREEN=""; YELLOW=""
+  CYAN=""; MAGENTA=""; BRIGHT_CYAN=""; BRIGHT_YELLOW=""
+  BRIGHT_MAGENTA=""; BRIGHT_GREEN=""; BROWN=""; ORANGE=""; TAN=""
+  HAT_BAND=""; STAR=""
+fi
+
+# ── Splash ───────────────────────────────────────────────────
+cappy_splash() {
+  printf '\n'
+  printf '   %s%s ██████╗ █████╗ ██████╗ ██████╗ ██╗   ██╗%s\n' "$BRIGHT_MAGENTA" "$BOLD" "$RST"
+  printf '   %s%s██╔════╝██╔══██╗██╔══██╗██╔══██╗╚██╗ ██╔╝%s\n' "$BRIGHT_MAGENTA" "$BOLD" "$RST"
+  printf '   %s%s██║     ███████║██████╔╝██████╔╝ ╚████╔╝ %s\n' "$BRIGHT_MAGENTA" "$BOLD" "$RST"
+  printf '   %s%s██║     ██╔══██║██╔═══╝ ██╔═══╝   ╚██╔╝  %s\n' "$MAGENTA" "$BOLD" "$RST"
+  printf '   %s%s╚██████╗██║  ██║██║     ██║        ██║   %s\n' "$MAGENTA" "$BOLD" "$RST"
+  printf '   %s ╚═════╝╚═╝  ╚═╝╚═╝     ╚═╝        ╚═╝   %s\n' "$MAGENTA" "$RST"
+  printf '\n'
+  # Capybara cowboy — ASCII-safe, no backslash escapes
+  printf '            %s_____________________%s\n' "$HAT_BAND" "$RST"
+  printf '           %s|%s   %s★%s   %s★%s   %s★%s   %s★%s    %s|%s\n' \
+    "$HAT_BAND" "$RST" "$STAR" "$RST" "$STAR" "$RST" "$STAR" "$RST" "$STAR" "$RST" "$HAT_BAND" "$RST"
+  printf '        %s___|_____________________|___%s\n' "$HAT_BAND" "$RST"
+  printf '        %s|                              |%s\n' "$BROWN" "$RST"
+  printf '        %s|    %s●%s              %s●%s       |%s\n' "$BROWN" "$BRIGHT_GREEN" "$BROWN" "$BRIGHT_GREEN" "$BROWN" "$RST"
+  printf '        %s|              %s◡%s             |%s\n' "$BROWN" "$ORANGE" "$BROWN" "$RST"
+  printf '        %s|______________________________|%s\n' "$BROWN" "$RST"
+  printf '              %showdy, partner.%s\n' "$DIM" "$RST"
+  printf '\n'
+  printf '   %s%sClaude Code power-user toolkit%s\n' "$BRIGHT_CYAN" "$BOLD" "$RST"
+  printf '   %sSDLC pipeline · 16 modules · agent swarms · ASCII capybaras%s\n\n' "$DIM" "$RST"
+}
+
+# ── Helpers ──────────────────────────────────────────────────
+err()  { printf '%s[err]%s  %s\n' "$RED" "$RST" "$*" >&2; }
+ok()   { printf '%s[ ok]%s  %s\n' "$GREEN" "$RST" "$*"; }
+info() { printf '%s[info]%s %s\n' "$CYAN" "$RST" "$*"; }
+
+require_repo() {
+  if [[ ! -d "$CAPPY_REPO/.git" ]]; then
+    err "Cappy repo not found at $CAPPY_REPO"
+    info "Reinstall: git clone https://github.com/0xfulgore/cappy.git ~/.cappy/repo && bash ~/.cappy/repo/install.sh"
+    exit 2
+  fi
+}
+
+# ── update ───────────────────────────────────────────────────
+cmd_update() {
+  require_repo
+  local yes=0 force=0
+  while (( $# )); do
+    case "$1" in
+      -y|--yes)   yes=1 ;;
+      -f|--force) force=1 ;;
+      *) err "unknown flag: $1"; exit 2 ;;
+    esac
+    shift
+  done
+
+  cd "$CAPPY_REPO"
+  if [[ -n "$(git status --porcelain)" ]] && (( !force )); then
+    err "Local changes in $CAPPY_REPO — refusing to update."
+    info "Stash, commit, or pass --force."
+    exit 3
+  fi
+
+  if (( !yes )); then
+    printf '%s↑ cappy update%s — pull latest and re-run install? [Y/n] ' "$BRIGHT_CYAN" "$RST"
+    read -r ans
+    case "${ans:-y}" in
+      [Yy]|[Yy][Ee][Ss]) ;;
+      *) info "cancelled"; exit 0 ;;
+    esac
+  fi
+
+  info "Pulling..."
+  git pull --ff-only --quiet || { err "git pull failed (non-fast-forward?)"; exit 4; }
+
+  info "Re-running installer (non-interactive)..."
+  CAPPY_NON_INTERACTIVE=1 bash "$CAPPY_REPO/install.sh"
+
+  rm -f "$CAPPY_HOME/.last-update-check" "$STATUS_FILE" 2>/dev/null || true
+  rm -f "$CAPPY_HOME"/.notified-* 2>/dev/null || true
+  ok "Updated. Run 'cappy status' to verify."
+}
+
+# ── status ───────────────────────────────────────────────────
+cmd_status() {
+  require_repo
+  if [[ ! -f "$STATUS_FILE" ]]; then
+    info "No update status yet. Run: cappy check"
+    return
+  fi
+  if ! command -v jq >/dev/null 2>&1; then
+    cat "$STATUS_FILE"
+    return
+  fi
+  local cur lat behind avail dirty ver checked branch
+  cur=$(jq -r '.current_sha[0:8] // "?"' "$STATUS_FILE")
+  lat=$(jq -r '.latest_sha[0:8] // "?"' "$STATUS_FILE")
+  behind=$(jq -r '.behind_count // 0' "$STATUS_FILE")
+  avail=$(jq -r '.available // false' "$STATUS_FILE")
+  dirty=$(jq -r '.dirty // false' "$STATUS_FILE")
+  ver=$(jq -r '.version // "?"' "$STATUS_FILE")
+  checked=$(jq -r '.checked_at // "?"' "$STATUS_FILE")
+  branch=$(jq -r '.branch // "?"' "$STATUS_FILE")
+
+  printf '\n'
+  printf '  %sversion%s   %s\n' "$DIM" "$RST" "$ver"
+  printf '  %sbranch%s    %s\n' "$DIM" "$RST" "$branch"
+  printf '  %scurrent%s   %s\n' "$DIM" "$RST" "$cur"
+  printf '  %slatest%s    %s\n' "$DIM" "$RST" "$lat"
+  printf '  %sbehind%s    %s\n' "$DIM" "$RST" "$behind"
+  printf '  %sdirty%s     %s\n' "$DIM" "$RST" "$dirty"
+  printf '  %schecked%s   %s\n' "$DIM" "$RST" "$checked"
+  if [[ "$avail" == "true" ]]; then
+    printf '\n  %s%s↑ update available%s — run: %s%scappy update%s\n\n' "$BRIGHT_CYAN" "$BOLD" "$RST" "$BOLD" "$BRIGHT_CYAN" "$RST"
+  else
+    printf '\n  %s✓ up to date%s\n\n' "$GREEN" "$RST"
+  fi
+}
+
+# ── check (force fresh check) ────────────────────────────────
+cmd_check() {
+  require_repo
+  rm -f "$CAPPY_HOME/.last-update-check" 2>/dev/null || true
+  bash "$CAPPY_REPO/lib/update-check.sh"
+  cmd_status
+}
+
+# ── version ──────────────────────────────────────────────────
+cmd_version() {
+  require_repo
+  if command -v jq >/dev/null 2>&1; then
+    jq -r '.version // "?"' "$CAPPY_REPO/forge.json"
+  else
+    grep -oE '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$CAPPY_REPO/forge.json" | head -1 | sed 's/.*"\([^"]*\)"$/\1/'
+  fi
+}
+
+# ── help ─────────────────────────────────────────────────────
+cmd_help() {
+  cappy_splash
+  printf '   %sUsage:%s cappy <command> [flags]\n\n' "$BOLD" "$RST"
+  printf '   %sCommands:%s\n' "$DIM" "$RST"
+  printf '     %supdate%s [-y|--yes] [-f|--force]   Pull latest and re-run install\n' "$BRIGHT_CYAN" "$RST"
+  printf '     %sstatus%s                           Show local vs remote SHA, behind count\n' "$BRIGHT_CYAN" "$RST"
+  printf '     %scheck%s                            Force a fresh update check now\n' "$BRIGHT_CYAN" "$RST"
+  printf '     %sversion%s                          Print installed cappy version\n' "$BRIGHT_CYAN" "$RST"
+  printf '     %shelp%s                             This screen\n' "$BRIGHT_CYAN" "$RST"
+  printf '\n'
+  printf '   %sRepo:%s     %s\n' "$DIM" "$RST" "$CAPPY_REPO"
+  printf '   %sStatus:%s   %s %s(24h cadence)%s\n\n' "$DIM" "$RST" "$STATUS_FILE" "$DIM" "$RST"
+}
+
+# ── Dispatch ─────────────────────────────────────────────────
+cmd="${1:-help}"
+shift || true
+case "$cmd" in
+  update)            cmd_update "$@" ;;
+  status)            cmd_status ;;
+  check)             cmd_check ;;
+  version|-v|--version) cmd_version ;;
+  help|-h|--help|"") cmd_help ;;
+  *) err "unknown command: $cmd"; cmd_help; exit 2 ;;
+esac

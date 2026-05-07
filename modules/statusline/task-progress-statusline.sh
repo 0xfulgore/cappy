@@ -163,6 +163,41 @@ if [ -n "$agent_name" ]; then
   parts+=("${MAGENTA}@${agent_name}${RST}")
 fi
 
+# ── Cappy update notifier (24h cadence, async background check) ──
+# Reads ~/.cappy/update-status.json. If stale, fires update-check.sh
+# detached so it can't slow this prompt. First sighting per day is
+# bold; subsequent renders that day are dim-magenta.
+cappy_status_file="$HOME/.cappy/update-status.json"
+cappy_check_script="$HOME/.cappy/repo/lib/update-check.sh"
+cappy_stamp="$HOME/.cappy/.last-update-check"
+if [ -x "$cappy_check_script" ]; then
+  fire_check=0
+  if [ ! -f "$cappy_stamp" ]; then
+    fire_check=1
+  else
+    stamp_age=$(( $(date +%s) - $(stat -f %m "$cappy_stamp" 2>/dev/null || stat -c %Y "$cappy_stamp" 2>/dev/null || echo 0) ))
+    [ "$stamp_age" -gt 86400 ] && fire_check=1
+  fi
+  if [ "$fire_check" -eq 1 ]; then
+    ( bash "$cappy_check_script" >/dev/null 2>&1 & ) 2>/dev/null
+  fi
+  if [ -f "$cappy_status_file" ] && command -v jq >/dev/null 2>&1; then
+    cappy_avail=$(jq -r '.available // false' "$cappy_status_file" 2>/dev/null)
+    cappy_behind=$(jq -r '.behind_count // 0' "$cappy_status_file" 2>/dev/null)
+    if [ "$cappy_avail" = "true" ]; then
+      cappy_today=$(date +%Y-%m-%d)
+      cappy_notif="$HOME/.cappy/.notified-${cappy_today}"
+      if [ ! -f "$cappy_notif" ]; then
+        parts+=("${BRIGHT_CYAN}${BOLD}↑ cappy +${cappy_behind}${RST}")
+        touch "$cappy_notif" 2>/dev/null || true
+        find "$HOME/.cappy" -maxdepth 1 -name '.notified-*' -mtime +2 -delete 2>/dev/null || true
+      else
+        parts+=("${MAGENTA}↑ cappy +${cappy_behind}${RST}")
+      fi
+    fi
+  fi
+fi
+
 # Join line 1
 line1=""
 for i in "${!parts[@]}"; do

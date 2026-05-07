@@ -30,7 +30,7 @@ Usage: install.sh [options]
 
 Options:
   --modules LIST    Comma-separated modules to install (default: all)
-                    Available: core,statusline,settings,hooks,mcp,teams,skills,templates
+                    Available: core,auto-update,statusline,settings,hooks,mcp,teams,skills,templates
   --preset NAME     Settings preset: power-user, cautious, team-lead (default: power-user)
   --claude-md PATH  Where to install CLAUDE.md (default: current directory)
   --no-backup       Skip backup step
@@ -104,6 +104,7 @@ parse_args() {
 select_modules() {
   local all_modules=(
     "core"
+    "auto-update"
     "statusline"
     "settings"
     "hooks"
@@ -132,13 +133,14 @@ select_modules() {
   fi
 
   local descriptions=(
-    "core           SDLC pipeline + 12 mechanical overrides (the engine)"
+    "core           SDLC pipeline + 18 mechanical overrides (the engine)"
+    "auto-update    cappy CLI shim + 24h-cadence update notifier in statusline"
     "statusline     Animated status bar: git, context %, tasks, cost, ETA"
     "settings       settings.json presets: power-user / cautious / team-lead"
     "hooks          Auto typecheck, lint, pre-commit gate, file guard"
     "hedge-detector Stop hook that rejects hedging (probably/I think/seems/could be)"
     "git-safety     Block force-push to main, conventional commit hints"
-    "mcp            MCP servers: GitHub, PostgreSQL, Playwright"
+    "mcp            MCP servers: GitHub, Linear, PostgreSQL, Playwright"
     "teams          Agent swarm templates: SDLC, API, review, docs, refactor"
     "skills         Task progress dashboard + skill discovery"
     "templates      Project CLAUDE.md generators: React, Rust, Python, Expo"

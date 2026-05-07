@@ -1,0 +1,10 @@
+{
+  "name": "auto-update",
+  "version": "1.0.0",
+  "description": "cappy CLI shim + 24h-cadence update notifier in the statusline",
+  "requires": [],
+  "conflicts": [],
+  "files": [],
+  "install_type": "files",
+  "post_install": "bash setup.sh"
+}
