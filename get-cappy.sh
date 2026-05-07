@@ -75,19 +75,11 @@ fi
 
 step "Running cappy boot"
 
-# When invoked via `curl … | bash`, stdin is the curl pipe — already
-# consumed by bash reading the script. Subsequent `read` prompts in
-# install.sh would hit EOF and (under `set -e`) crash the installer
-# right at the first prompt. Reattach stdin to the controlling TTY so
-# prompts work; if there's no TTY (CI, no controlling terminal), fall
-# through to a non-interactive install instead of crashing.
-if [[ ! -t 0 ]]; then
-  if (exec < /dev/tty) 2>/dev/null; then
-    exec < /dev/tty
-  else
-    info "no TTY available — running non-interactive install"
-    set -- --non-interactive "$@"
-  fi
-fi
-
+# DO NOT redirect stdin here. Under `curl … | bash`, bash is reading
+# this script from fd 0 (the curl pipe). Redirecting fd 0 mid-script
+# would make bash try to read the rest of get-cappy.sh from the new
+# source (e.g. /dev/tty), which silently hangs waiting for keyboard
+# "input" that's really meant to be more script. install.sh handles
+# stdin reattachment itself — and it's safe there because install.sh
+# is loaded from a real file, not stdin.
 exec "$CAPPY_REPO/bin/cappy" boot "$@"

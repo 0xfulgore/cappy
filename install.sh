@@ -5,13 +5,24 @@ set -euo pipefail
 # Cappy — Claude Code Power-User Toolkit Installer
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-# Reattach stdin to the controlling TTY when invoked via a pipe
-# (e.g. `curl … | bash` or `bash install.sh < /dev/null`). Without
-# this, the first interactive `read` hits EOF and `set -e` silently
-# kills the installer — which is exactly the bug users hit when
-# re-running the curl-pipe bootstrap on an existing install.
-if [[ ! -t 0 ]] && (exec < /dev/tty) 2>/dev/null; then
-  exec < /dev/tty
+# When invoked via a pipe (curl|bash, or stdin redirected from
+# /dev/null), the first interactive `read` hits EOF — under `set -e`
+# this either silently crashes the installer or, worse, traps loops
+# like prompt_select's `while true; do read; done` into spinning on
+# empty input forever. Reattach stdin to the controlling TTY when one
+# exists. If no TTY is available at all (CI, no controlling terminal),
+# force --non-interactive so we don't spin or crash.
+#
+# Safe to do here because install.sh is loaded from a real file, so
+# bash's script-reading is independent of fd 0. (Doing this in the
+# curl-piped get-cappy.sh would break bash's script reader.)
+if [[ ! -t 0 ]]; then
+  if (exec < /dev/tty) 2>/dev/null; then
+    exec < /dev/tty
+  else
+    export CAPPY_NON_INTERACTIVE=1
+    set -- --non-interactive "$@"
+  fi
 fi
 
 CAPPY_VERSION="1.0.0"
