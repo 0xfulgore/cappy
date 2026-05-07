@@ -35,6 +35,8 @@ The installer asks where your projects live (e.g., `~/Development`), installs a 
 | **accessibility** | WCAG 2.2 AA: keyboard nav, screen readers, contrast, touch targets |
 | **devops** | CI/CD awareness, env var safety, Docker best practices, migrations |
 | **api-design** | REST conventions, input validation, error handling, versioning |
+| **ruflo** | Ruflo agent platform: marketplace + 8 plugins + MCP server |
+| **mempalace** | MemPalace local-first AI memory: pip package + MCP server (user scope). Auto-installs pipx if missing. Run `mempalace init/mine` per project. |
 
 ## Quick Start
 

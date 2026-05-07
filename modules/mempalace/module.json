@@ -1,0 +1,11 @@
+{
+  "name": "mempalace",
+  "version": "1.0.0",
+  "description": "MemPalace: local-first AI memory (pip package + MCP server, user-scope)",
+  "requires": [],
+  "conflicts": [],
+  "files": [],
+  "install_type": "files",
+  "settings_merge": {},
+  "post_install": "bash setup-mempalace.sh"
+}
