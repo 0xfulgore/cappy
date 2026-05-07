@@ -255,16 +255,16 @@ cappy help             # show splash + usage
 - PATH symlink: `~/.local/bin/cappy` (created automatically only if `~/.local/bin` already exists; install never modifies your shell rc files)
 - If `~/.local/bin` isn't on your `$PATH`, run via the canonical path or add it yourself.
 
-## Updating (legacy)
+## Updating
 
-You can still run the bare scripts directly:
 ```bash
-~/.cappy/repo/update.sh
-# or:
-cd cappy && git pull && ./update.sh
+cappy update          # interactive — surfaces any new modules
+cappy update -y       # non-interactive — silent re-apply
 ```
 
-Updates re-apply installed modules without touching your customizations. Cappy-managed sections in CLAUDE.md (inside `<!-- cappy:managed-start/end -->` markers) are replaced; your own content is preserved.
+`cappy update` pulls the latest tag, then re-runs the installer. The selector is installed-aware: existing modules are re-applied silently, and any modules added since your last install are listed so you can opt in (`a` for all, numbers for specific picks, Enter to skip).
+
+Updates never touch your customizations. Cappy-managed sections in CLAUDE.md (inside `<!-- cappy:managed-start/end -->` markers) are replaced; your own content is preserved.
 
 ## Uninstalling
 

@@ -109,71 +109,185 @@ parse_args() {
 }
 
 # ── Module selection ─────────────────────────────────────────
-select_modules() {
-  local all_modules=(
-    "core"
-    "auto-update"
-    "statusline"
-    "settings"
-    "hooks"
-    "hedge-detector"
-    "git-safety"
-    "mcp"
-    "teams"
-    "skills"
-    "templates"
-    "performance"
-    "accessibility"
-    "devops"
-    "api-design"
-    "ruflo"
-    "mempalace"
-  )
+# Catalogue lives here so install / update / re-install all share the
+# same source of truth. Order matters: it controls the display order in
+# the picker.
+_cappy_all_modules() {
+  printf '%s\n' \
+    core \
+    auto-update \
+    statusline \
+    settings \
+    hooks \
+    hedge-detector \
+    git-safety \
+    mcp \
+    teams \
+    skills \
+    templates \
+    performance \
+    accessibility \
+    devops \
+    api-design \
+    ruflo \
+    mempalace
+}
 
+# Human-readable description for a module name. Single source of truth
+# so the picker labels match wherever modules are listed.
+_cappy_module_description() {
+  case "$1" in
+    core)           printf 'SDLC pipeline + 18 mechanical overrides (the engine)' ;;
+    auto-update)    printf 'cappy CLI shim + 24h-cadence update notifier in statusline' ;;
+    statusline)     printf 'Animated status bar: git, context %%, tasks, cost, ETA' ;;
+    settings)       printf 'settings.json presets: power-user / cautious / team-lead' ;;
+    hooks)          printf 'Auto typecheck, lint, pre-commit gate, file guard' ;;
+    hedge-detector) printf 'Stop hook that rejects hedging (probably/I think/seems/could be)' ;;
+    git-safety)     printf 'Block force-push to main, conventional commit hints' ;;
+    mcp)            printf 'MCP servers: GitHub, Linear, PostgreSQL, Playwright' ;;
+    teams)          printf 'Agent swarm templates: SDLC, API, review, docs, refactor' ;;
+    skills)         printf 'Task progress dashboard + skill discovery' ;;
+    templates)      printf 'Project CLAUDE.md generators: React, Rust, Python, Expo' ;;
+    performance)    printf 'Perf directives: bundle size, N+1 queries, lazy loading' ;;
+    accessibility)  printf 'WCAG 2.2 AA: keyboard nav, screen readers, contrast' ;;
+    devops)         printf 'CI/CD awareness, env var safety, Docker, migrations' ;;
+    api-design)     printf 'REST conventions, validation, pagination, error handling' ;;
+    ruflo)          printf 'Ruflo agent platform: marketplace + 8 plugins + MCP server' ;;
+    mempalace)      printf 'MemPalace local-first AI memory (pip + MCP server, user scope)' ;;
+    *)              printf '%s' "$1" ;;
+  esac
+}
+
+# Read currently-installed modules from $CAPPY_INSTALLED_JSON.
+# Emits one module name per line. Empty output if no prior install.
+_cappy_installed_modules() {
+  [[ -f "$CAPPY_INSTALLED_JSON" ]] || return 0
+  jq -r '.modules | keys[]?' "$CAPPY_INSTALLED_JSON" 2>/dev/null
+}
+
+# True if $1 is in the newline-separated list passed on stdin.
+_cappy_in_list() {
+  local needle="$1" line
+  while IFS= read -r line; do
+    [[ "$line" == "$needle" ]] && return 0
+  done
+  return 1
+}
+
+select_modules() {
+  local all_modules=()
+  while IFS= read -r m; do
+    [[ -n "$m" ]] && all_modules+=("$m")
+  done < <(_cappy_all_modules)
+
+  # Explicit --modules flag wins over everything.
   if [[ -n "$CAPPY_SELECTED_MODULES" ]]; then
     IFS=',' read -ra MODULES <<< "$CAPPY_SELECTED_MODULES"
     return
   fi
 
+  # Discover prior install state.
+  local installed_list=""
+  installed_list=$(_cappy_installed_modules)
+
+  local -a installed=() new_modules=()
+  for m in "${all_modules[@]}"; do
+    if printf '%s\n' "$installed_list" | _cappy_in_list "$m"; then
+      installed+=("$m")
+    else
+      new_modules+=("$m")
+    fi
+  done
+
+  # Non-interactive paths
   if [[ "${CAPPY_NON_INTERACTIVE:-}" == "1" ]]; then
-    MODULES=("${all_modules[@]}")
+    if (( ${#installed[@]} > 0 )); then
+      # Prior install: re-apply only what's installed (don't silently
+      # opt the user into new modules without consent).
+      MODULES=("${installed[@]}")
+      log_info "Non-interactive re-apply: ${#installed[@]} installed module(s)"
+    else
+      # Fresh install with no flag and no TTY: install everything.
+      MODULES=("${all_modules[@]}")
+    fi
     return
   fi
 
-  local descriptions=(
-    "core           SDLC pipeline + 18 mechanical overrides (the engine)"
-    "auto-update    cappy CLI shim + 24h-cadence update notifier in statusline"
-    "statusline     Animated status bar: git, context %, tasks, cost, ETA"
-    "settings       settings.json presets: power-user / cautious / team-lead"
-    "hooks          Auto typecheck, lint, pre-commit gate, file guard"
-    "hedge-detector Stop hook that rejects hedging (probably/I think/seems/could be)"
-    "git-safety     Block force-push to main, conventional commit hints"
-    "mcp            MCP servers: GitHub, Linear, PostgreSQL, Playwright"
-    "teams          Agent swarm templates: SDLC, API, review, docs, refactor"
-    "skills         Task progress dashboard + skill discovery"
-    "templates      Project CLAUDE.md generators: React, Rust, Python, Expo"
-    "performance    Perf directives: bundle size, N+1 queries, lazy loading"
-    "accessibility  WCAG 2.2 AA: keyboard nav, screen readers, contrast"
-    "devops         CI/CD awareness, env var safety, Docker, migrations"
-    "api-design     REST conventions, validation, pagination, error handling"
-    "ruflo          Ruflo agent platform: marketplace + 8 plugins + MCP server"
-    "mempalace      MemPalace local-first AI memory (pip + MCP server, user scope)"
-  )
+  # Fresh install — show full multiselect (legacy behaviour).
+  if (( ${#installed[@]} == 0 )); then
+    local descriptions=()
+    for m in "${all_modules[@]}"; do
+      local desc
+      desc=$(_cappy_module_description "$m")
+      descriptions+=("$(printf '%-15s %s' "$m" "$desc")")
+    done
 
-  local selected
-  selected=$(prompt_multiselect "Which modules would you like to install?" "${descriptions[@]}")
+    local selected
+    selected=$(prompt_multiselect "Which modules would you like to install?" "${descriptions[@]}")
 
-  MODULES=()
-  while IFS= read -r idx; do
-    [[ -n "$idx" ]] && MODULES+=("${all_modules[$idx]}")
-  done <<< "$selected"
+    MODULES=()
+    while IFS= read -r idx; do
+      [[ -n "$idx" ]] && MODULES+=("${all_modules[$idx]}")
+    done <<< "$selected"
 
-  if [[ ${#MODULES[@]} -eq 0 ]]; then
-    log_error "No modules selected. Nothing to install."
-    exit 1
+    if [[ ${#MODULES[@]} -eq 0 ]]; then
+      log_error "No modules selected. Nothing to install."
+      exit 1
+    fi
+    printf "\n  %sSelected:%s %s\n" "$BOLD" "$RST" "${MODULES[*]}"
+    return
   fi
 
-  printf "\n  %sSelected:%s %s\n" "$BOLD" "$RST" "${MODULES[*]}"
+  # Re-install / update path: prior install detected.
+  printf "\n"
+  log_info "Already installed (will be re-applied): ${installed[*]}"
+
+  if (( ${#new_modules[@]} == 0 )); then
+    # Nothing new since last time → silent re-apply (per user pref).
+    MODULES=("${installed[@]}")
+    log_success "No new modules since last install — re-applying existing set"
+    return
+  fi
+
+  # New modules available → focused prompt for just those.
+  printf "\n  %sNew modules available since your last install:%s\n\n" "$BOLD" "$RST"
+  for i in "${!new_modules[@]}"; do
+    local m="${new_modules[$i]}"
+    local desc
+    desc=$(_cappy_module_description "$m")
+    printf "    %s%2d)%s %-15s %s\n" "$CYAN" $((i + 1)) "$RST" "$m" "$desc"
+  done
+  printf "\n  Pick numbers to add (space-separated), %sa%s for all, or Enter to skip: " "$BRIGHT_CYAN" "$RST"
+
+  local input
+  read -r input
+
+  local -a chosen_new=()
+  case "$input" in
+    ""|n|N|no|NO)
+      : # skip all new
+      ;;
+    a|A|all|ALL)
+      chosen_new=("${new_modules[@]}")
+      ;;
+    *)
+      for num in $input; do
+        if [[ "$num" =~ ^[0-9]+$ ]] && (( num >= 1 && num <= ${#new_modules[@]} )); then
+          chosen_new+=("${new_modules[$((num - 1))]}")
+        fi
+      done
+      ;;
+  esac
+
+  MODULES=("${installed[@]}")
+  if (( ${#chosen_new[@]} > 0 )); then
+    MODULES+=("${chosen_new[@]}")
+    log_success "Adding new: ${chosen_new[*]}"
+  else
+    log_info "Skipping new modules"
+  fi
+
+  printf "\n  %sFinal selection:%s %s\n" "$BOLD" "$RST" "${MODULES[*]}"
 }
 
 # ── CLAUDE.md location selection ──────────────────────────────

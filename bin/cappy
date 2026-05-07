@@ -27,6 +27,10 @@ else
 fi
 
 # ── Splash ───────────────────────────────────────────────────
+# All capybara lines are exactly 35 visual cells wide between the
+# leading indent and the trailing newline. Pure ASCII (no ★ / ● /
+# ◡) so the right edge can't drift on terminals that disagree about
+# unicode east-asian widths.
 cappy_splash() {
   printf '\n'
   printf '   %s%s ██████╗ █████╗ ██████╗ ██████╗ ██╗   ██╗%s\n' "$BRIGHT_MAGENTA" "$BOLD" "$RST"
@@ -36,19 +40,29 @@ cappy_splash() {
   printf '   %s%s╚██████╗██║  ██║██║     ██║        ██║   %s\n' "$MAGENTA" "$BOLD" "$RST"
   printf '   %s ╚═════╝╚═╝  ╚═╝╚═╝     ╚═╝        ╚═╝   %s\n' "$MAGENTA" "$RST"
   printf '\n'
-  # Capybara cowboy — ASCII-safe, no backslash escapes
-  printf '            %s_____________________%s\n' "$HAT_BAND" "$RST"
-  printf '           %s|%s   %s★%s   %s★%s   %s★%s   %s★%s    %s|%s\n' \
-    "$HAT_BAND" "$RST" "$STAR" "$RST" "$STAR" "$RST" "$STAR" "$RST" "$STAR" "$RST" "$HAT_BAND" "$RST"
-  printf '        %s___|_____________________|___%s\n' "$HAT_BAND" "$RST"
-  printf '        %s|                              |%s\n' "$BROWN" "$RST"
-  printf '        %s|    %s●%s              %s●%s       |%s\n' "$BROWN" "$BRIGHT_GREEN" "$BROWN" "$BRIGHT_GREEN" "$BROWN" "$RST"
-  printf '        %s|              %s◡%s             |%s\n' "$BROWN" "$ORANGE" "$BROWN" "$RST"
-  printf '        %s|______________________________|%s\n' "$BROWN" "$RST"
-  printf '              %showdy, partner.%s\n' "$DIM" "$RST"
+  local IND='      '
+  printf '%s      %s_______________________%s\n'                                "$IND" "$HAT_BAND" "$RST"
+  printf '%s     %s|%s   %s*   *   *   *   *%s   %s|%s\n'                       "$IND" "$HAT_BAND" "$RST" "$STAR" "$RST" "$HAT_BAND" "$RST"
+  printf '%s%s_____|_______________________|_____%s\n'                          "$IND" "$HAT_BAND" "$RST"
+  printf '%s%s/                                 \\%s\n'                          "$IND" "$BROWN" "$RST"
+  printf '%s%s|    _                       _    |%s\n'                          "$IND" "$BROWN" "$RST"
+  printf '%s%s|   / \\                     / \\   |%s\n'                          "$IND" "$BROWN" "$RST"
+  printf '%s%s|   \\_/                     \\_/   |%s\n'                          "$IND" "$BROWN" "$RST"
+  printf '%s%s|                                 |%s\n'                          "$IND" "$BROWN" "$RST"
+  printf '%s%s|     %so%s                     %so%s     |%s\n'                  "$IND" "$BROWN" "$BRIGHT_GREEN" "$BROWN" "$BRIGHT_GREEN" "$BROWN" "$RST"
+  printf '%s%s|                                 |%s\n'                          "$IND" "$BROWN" "$RST"
+  printf '%s%s|            %s_________%s            |%s\n'                      "$IND" "$BROWN" "$ORANGE" "$BROWN" "$RST"
+  printf '%s%s|           %s/  .   .  \\%s           |%s\n'                      "$IND" "$BROWN" "$ORANGE" "$BROWN" "$RST"
+  printf '%s%s|           %s\\____v____/%s           |%s\n'                      "$IND" "$BROWN" "$ORANGE" "$BROWN" "$RST"
+  printf '%s%s|                                 |%s\n'                          "$IND" "$BROWN" "$RST"
+  printf '%s%s\\_________________________________/%s\n'                          "$IND" "$BROWN" "$RST"
+  printf '%s    %s||                       ||%s\n'                              "$IND" "$BROWN" "$RST"
+  printf '%s    %s||                       ||%s\n'                              "$IND" "$BROWN" "$RST"
+  printf '\n'
+  printf '            %showdy, partner.%s\n' "$DIM" "$RST"
   printf '\n'
   printf '   %s%sClaude Code power-user toolkit%s\n' "$BRIGHT_CYAN" "$BOLD" "$RST"
-  printf '   %sSDLC pipeline · 16 modules · agent swarms · ASCII capybaras%s\n\n' "$DIM" "$RST"
+  printf '   %sSDLC pipeline · 17 modules · agent swarms · ASCII capybaras%s\n\n' "$DIM" "$RST"
 }
 
 # ── Helpers ──────────────────────────────────────────────────
@@ -124,8 +138,18 @@ cmd_update() {
   info "Pulling..."
   git pull --ff-only --quiet || { err "git pull failed (non-fast-forward?)"; exit 4; }
 
-  info "Re-running installer (non-interactive)..."
-  CAPPY_NON_INTERACTIVE=1 bash "$CAPPY_REPO/install.sh"
+  # Interactive install when we have a TTY and the user didn't pass -y.
+  # The installer's select_modules is installed-aware: it will silently
+  # re-apply existing modules when nothing new is available, and only
+  # prompt when there are new modules since the last install. With -y or
+  # no TTY (cron / CI / scripts), fall back to non-interactive re-apply.
+  if (( yes )) || [[ ! -t 0 ]]; then
+    info "Re-running installer (non-interactive)..."
+    CAPPY_NON_INTERACTIVE=1 bash "$CAPPY_REPO/install.sh"
+  else
+    info "Re-running installer..."
+    bash "$CAPPY_REPO/install.sh"
+  fi
 
   rm -f "$CAPPY_HOME/.last-update-check" "$STATUS_FILE" 2>/dev/null || true
   rm -f "$CAPPY_HOME"/.notified-* 2>/dev/null || true

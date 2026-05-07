@@ -302,14 +302,14 @@ prompt_init_projects() {
   fi
 
   # Build candidate list
-  local -a candidates=()
+  local -a all_candidates=()
   while IFS= read -r line; do
-    [[ -n "$line" ]] && candidates+=("$line")
+    [[ -n "$line" ]] && all_candidates+=("$line")
   done < <(discover_project_candidates)
 
   # Decide between multiselect (auto-detected) and free-form path entry
   local -a chosen=()
-  if (( ${#candidates[@]} == 0 )); then
+  if (( ${#all_candidates[@]} == 0 )); then
     log_info "No git repos auto-detected under common dev roots."
     printf "Enter project paths to initialize (space-separated, ~ allowed), or blank to skip:\n  " >&2
     local raw
@@ -319,7 +319,39 @@ prompt_init_projects() {
       [[ -d "$p" ]] && chosen+=("$p") || log_warn "Skipping '$p' — not a directory"
     done
   else
-    # Annotate state per project: init'd? mined?
+    # Split candidates into "fully mined" (boring — hide by default) and
+    # "needs work" (init missing, or init'd but not mined). The user
+    # asked for: focus on what's new, surface already-handled stuff
+    # behind a toggle.
+    local -a needs_work=() fully_mined=()
+    for dir in "${all_candidates[@]}"; do
+      if palace_initialized "$cmd" "$dir" && palace_has_been_mined "$cmd" "$dir"; then
+        fully_mined+=("$dir")
+      else
+        needs_work+=("$dir")
+      fi
+    done
+
+    # Default candidate pool: only projects that aren't already done.
+    # Falls back to the full list if everything is already mined (so the
+    # user still sees something).
+    local -a candidates=()
+    local show_all=0
+    if (( ${#needs_work[@]} > 0 )); then
+      candidates=("${needs_work[@]}")
+    else
+      log_info "All discovered projects are already initialized + mined."
+      candidates=("${all_candidates[@]}")
+      show_all=1
+    fi
+
+    if (( ${#fully_mined[@]} > 0 )); then
+      log_info "Hiding ${#fully_mined[@]} already-mined project(s) — pick 's' to show all"
+    fi
+
+    # Annotate state per project. Only init'd-but-not-mined gets a tag
+    # in the trimmed list; fully-mined entries only appear if "show all"
+    # is on, and they get tagged accordingly.
     local -a labels=()
     for dir in "${candidates[@]}"; do
       local tag=""
@@ -332,17 +364,56 @@ prompt_init_projects() {
       fi
       labels+=("$(basename "$dir")${tag}   ($dir)")
     done
+    if (( !show_all )) && (( ${#fully_mined[@]} > 0 )); then
+      labels+=("Show all (incl. ${#fully_mined[@]} already mined)…")
+    fi
     labels+=("Custom path…")
+
+    local custom_idx=$(( ${#labels[@]} - 1 ))
+    local show_all_idx=-1
+    if (( !show_all )) && (( ${#fully_mined[@]} > 0 )); then
+      show_all_idx=$(( ${#labels[@]} - 2 ))
+    fi
 
     local sel_idx
     while IFS= read -r sel_idx; do
       [[ -z "$sel_idx" ]] && continue
-      if (( sel_idx == ${#candidates[@]} )); then
+      if (( sel_idx == custom_idx )); then
         printf "  Enter custom path: " >&2
         local p
         read -r p
         p="${p/#\~/$HOME}"
         [[ -d "$p" ]] && chosen+=("$p") || log_warn "Skipping '$p' — not a directory"
+      elif (( show_all_idx >= 0 && sel_idx == show_all_idx )); then
+        # Re-prompt with the full list (one re-roll only).
+        log_info "Showing all projects including already-mined ones..."
+        local -a full_labels=()
+        for dir in "${all_candidates[@]}"; do
+          local tag=""
+          if palace_initialized "$cmd" "$dir"; then
+            if palace_has_been_mined "$cmd" "$dir"; then
+              tag="  [init'd + mined — will skip both]"
+            else
+              tag="  [already initialized — will skip init]"
+            fi
+          fi
+          full_labels+=("$(basename "$dir")${tag}   ($dir)")
+        done
+        full_labels+=("Custom path…")
+        local full_custom_idx=$(( ${#full_labels[@]} - 1 ))
+        local fsel
+        while IFS= read -r fsel; do
+          [[ -z "$fsel" ]] && continue
+          if (( fsel == full_custom_idx )); then
+            printf "  Enter custom path: " >&2
+            local p2
+            read -r p2
+            p2="${p2/#\~/$HOME}"
+            [[ -d "$p2" ]] && chosen+=("$p2") || log_warn "Skipping '$p2' — not a directory"
+          else
+            chosen+=("${all_candidates[$fsel]}")
+          fi
+        done < <(prompt_multiselect "Select projects to initialize:" "${full_labels[@]}")
       else
         chosen+=("${candidates[$sel_idx]}")
       fi
