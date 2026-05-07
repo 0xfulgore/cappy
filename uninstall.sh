@@ -69,7 +69,8 @@ main() {
     printf "\n  A backup exists at: %s\n" "$backup_path"
     printf "  Restore it? [y/N] "
     read -r ans
-    if [[ "${ans,,}" == "y" ]]; then
+    case "$ans" in [Yy]|[Yy][Ee][Ss]) is_yes=1 ;; *) is_yes=0 ;; esac
+    if (( is_yes )); then
       # Source backup lib if available
       local repo_dir="${CAPPY_HOME}/repo"
       if [[ -f "$repo_dir/lib/backup.sh" ]]; then

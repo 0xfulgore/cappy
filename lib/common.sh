@@ -80,7 +80,10 @@ prompt_yn() {
   printf "%s %s " "$question" "$hint"
   read -r ans
   ans="${ans:-$default}"
-  [[ "${ans,,}" == "y" ]]
+  case "$ans" in
+    [Yy]|[Yy][Ee][Ss]) return 0 ;;
+    *) return 1 ;;
+  esac
 }
 
 prompt_select() {
