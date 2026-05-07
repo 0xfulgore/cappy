@@ -62,7 +62,7 @@ cappy_splash() {
   printf '            %showdy, partner.%s\n' "$DIM" "$RST"
   printf '\n'
   printf '   %s%sClaude Code power-user toolkit%s\n' "$BRIGHT_CYAN" "$BOLD" "$RST"
-  printf '   %sSDLC pipeline · 17 modules · agent swarms · ASCII capybaras%s\n\n' "$DIM" "$RST"
+  printf '   %sSDLC pipeline · 17+2 modules · agent swarms · ASCII capybaras%s\n\n' "$DIM" "$RST"
 }
 
 # ── Helpers ──────────────────────────────────────────────────

@@ -1,0 +1,11 @@
+{
+  "name": "cua-driver",
+  "version": "1.0.0",
+  "description": "cua-driver: macOS app driver (Swift binary + MCP server, trycua/cua)",
+  "requires": [],
+  "conflicts": [],
+  "files": [],
+  "install_type": "files",
+  "settings_merge": {},
+  "post_install": "bash setup-cua-driver.sh"
+}

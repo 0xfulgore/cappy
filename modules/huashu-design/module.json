@@ -1,0 +1,11 @@
+{
+  "name": "huashu-design",
+  "version": "1.0.0",
+  "description": "huashu-design: HTML hi-fi prototyping skill (alchaincyf/huashu-design)",
+  "requires": [],
+  "conflicts": [],
+  "files": [],
+  "install_type": "files",
+  "settings_merge": {},
+  "post_install": "bash setup-huashu-design.sh"
+}

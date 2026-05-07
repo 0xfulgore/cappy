@@ -22,7 +22,7 @@ The installer asks where your projects live (e.g., `~/Development`), installs a 
 
 ## What You Get
 
-17 modules; install all or pick a subset.
+17 default modules + 2 opt-in modules. Install all or pick a subset.
 
 | Module | Description |
 |--------|-------------|
@@ -43,6 +43,14 @@ The installer asks where your projects live (e.g., `~/Development`), installs a 
 | **api-design** | REST conventions, input validation, error handling, versioning |
 | **ruflo** | Ruflo agent platform: marketplace + 8 plugins + MCP server |
 | **mempalace** | MemPalace local-first AI memory: pip package + MCP server (user scope). Auto-installs pipx if missing. Run `mempalace init/mine` per project. |
+
+### Opt-in modules
+These are listed in the picker but NOT included in "install all" — pick by number, or pass via `--modules`. Both fetch from upstream at install time.
+
+| Module | Description |
+|--------|-------------|
+| **huashu-design** | HTML hi-fi prototyping skill from [alchaincyf/huashu-design](https://github.com/alchaincyf/huashu-design). Shallow-clones into `~/.claude/skills/huashu-design`. |
+| **cua-driver** | macOS app driver from [trycua/cua](https://github.com/trycua/cua) — Swift binary + MCP server + bundled skill pack. Delegates to upstream's official installer; auto-registers as an MCP server in Claude Code. macOS-only (skips on other OSes). Needs Accessibility + Screen Recording permissions on first use. |
 
 ## Quick Start
 

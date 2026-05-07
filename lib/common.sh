@@ -113,23 +113,48 @@ prompt_multiselect() {
   shift
   local options=("$@")
 
+  # Optional env-var inputs (omit for back-compat default behaviour):
+  #   CAPPY_MULTISELECT_DEFAULTS — space-separated 0-based indices that
+  #     "0 for all" should select. Empty/unset = every option (legacy).
+  #   CAPPY_MULTISELECT_OPTIONAL_FROM — 0-based index where an
+  #     "Optional (opt-in)" section begins. Renders a header before
+  #     that index and excludes those options from the default subset.
+  local default_indices="${CAPPY_MULTISELECT_DEFAULTS:-}"
+  local optional_from="${CAPPY_MULTISELECT_OPTIONAL_FROM:-}"
+
   if [[ "${CAPPY_NON_INTERACTIVE:-}" == "1" ]]; then
-    for i in "${!options[@]}"; do echo "$i"; done
+    if [[ -n "$default_indices" ]]; then
+      printf '%s\n' $default_indices
+    else
+      for i in "${!options[@]}"; do echo "$i"; done
+    fi
     return
   fi
 
   printf "\n%s%s%s\n\n" "$BOLD" "$prompt" "$RST" >&2
   for i in "${!options[@]}"; do
+    if [[ -n "$optional_from" ]] && (( i == optional_from )); then
+      printf "\n  %s── Optional (opt-in) ──%s\n" "$DIM" "$RST" >&2
+    fi
     printf "  %s%2d)%s %s\n" "$CYAN" $((i + 1)) "$RST" "${options[$i]}" >&2
   done
-  printf "  %s 0)%s All of the above (recommended)\n" "$GREEN" "$RST" >&2
 
-  printf "\n%sEnter numbers separated by spaces, or 0 for all [0]: %s" "$BRIGHT_CYAN" "$RST" >&2
+  if [[ -n "$default_indices" ]]; then
+    printf "\n  %s 0)%s Recommended set (default)\n" "$GREEN" "$RST" >&2
+  else
+    printf "  %s 0)%s All of the above (recommended)\n" "$GREEN" "$RST" >&2
+  fi
+
+  printf "\n%sEnter numbers separated by spaces, or 0 for default [0]: %s" "$BRIGHT_CYAN" "$RST" >&2
   read -r input
   input="${input:-0}"
 
   if [[ "$input" == "0" ]]; then
-    for i in "${!options[@]}"; do echo "$i"; done
+    if [[ -n "$default_indices" ]]; then
+      printf '%s\n' $default_indices
+    else
+      for i in "${!options[@]}"; do echo "$i"; done
+    fi
     return
   fi
 

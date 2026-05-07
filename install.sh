@@ -153,6 +153,16 @@ _cappy_all_modules() {
     mempalace
 }
 
+# Opt-in modules — listed alongside the defaults in the picker but NOT
+# auto-selected. Users add them by number, or via --modules flag.
+# Keep these out of "select all" so first-time users don't get a slow
+# install dragged down by network fetches / macOS-only binaries.
+_cappy_optional_modules() {
+  printf '%s\n' \
+    huashu-design \
+    cua-driver
+}
+
 # Human-readable description for a module name. Single source of truth
 # so the picker labels match wherever modules are listed.
 _cappy_module_description() {
@@ -174,6 +184,8 @@ _cappy_module_description() {
     api-design)     printf 'REST conventions, validation, pagination, error handling' ;;
     ruflo)          printf 'Ruflo agent platform: marketplace + 8 plugins + MCP server' ;;
     mempalace)      printf 'MemPalace local-first AI memory (pip + MCP server, user scope)' ;;
+    huashu-design)  printf 'HTML hi-fi prototyping skill (huashu-design @ alchaincyf)' ;;
+    cua-driver)     printf 'macOS app driver: AX-tree + CLI/MCP (cua-driver @ trycua)' ;;
     *)              printf '%s' "$1" ;;
   esac
 }
@@ -195,10 +207,14 @@ _cappy_in_list() {
 }
 
 select_modules() {
-  local all_modules=()
+  local default_modules=() optional_modules=() combined_modules=()
   while IFS= read -r m; do
-    [[ -n "$m" ]] && all_modules+=("$m")
+    [[ -n "$m" ]] && default_modules+=("$m")
   done < <(_cappy_all_modules)
+  while IFS= read -r m; do
+    [[ -n "$m" ]] && optional_modules+=("$m")
+  done < <(_cappy_optional_modules)
+  combined_modules=("${default_modules[@]}" "${optional_modules[@]}")
 
   # Explicit --modules flag wins over everything.
   if [[ -n "$CAPPY_SELECTED_MODULES" ]]; then
@@ -206,12 +222,14 @@ select_modules() {
     return
   fi
 
-  # Discover prior install state.
+  # Discover prior install state. Both default and optional modules
+  # count toward "already installed" so the re-apply path keeps any
+  # opt-in modules a user previously chose.
   local installed_list=""
   installed_list=$(_cappy_installed_modules)
 
   local -a installed=() new_modules=()
-  for m in "${all_modules[@]}"; do
+  for m in "${combined_modules[@]}"; do
     if printf '%s\n' "$installed_list" | _cappy_in_list "$m"; then
       installed+=("$m")
     else
@@ -227,27 +245,40 @@ select_modules() {
       MODULES=("${installed[@]}")
       log_info "Non-interactive re-apply: ${#installed[@]} installed module(s)"
     else
-      # Fresh install with no flag and no TTY: install everything.
-      MODULES=("${all_modules[@]}")
+      # Fresh install with no flag and no TTY: install the default
+      # set only. Optional modules are opt-in and require a TTY (or
+      # explicit --modules flag) to be selected.
+      MODULES=("${default_modules[@]}")
     fi
     return
   fi
 
-  # Fresh install — show full multiselect (legacy behaviour).
+  # Fresh install — show full multiselect with default + opt-in groups.
   if (( ${#installed[@]} == 0 )); then
     local descriptions=()
-    for m in "${all_modules[@]}"; do
+    for m in "${combined_modules[@]}"; do
       local desc
       desc=$(_cappy_module_description "$m")
       descriptions+=("$(printf '%-15s %s' "$m" "$desc")")
     done
 
+    # Tell prompt_multiselect that "0 for all" should map to the
+    # default-on subset only, and where the optional section starts.
+    local default_idx_list=""
+    local i
+    for ((i = 0; i < ${#default_modules[@]}; i++)); do
+      default_idx_list+="$i "
+    done
+
     local selected
-    selected=$(prompt_multiselect "Which modules would you like to install?" "${descriptions[@]}")
+    selected=$(CAPPY_MULTISELECT_DEFAULTS="$default_idx_list" \
+               CAPPY_MULTISELECT_OPTIONAL_FROM="${#default_modules[@]}" \
+               prompt_multiselect "Which modules would you like to install?" \
+                 "${descriptions[@]}")
 
     MODULES=()
     while IFS= read -r idx; do
-      [[ -n "$idx" ]] && MODULES+=("${all_modules[$idx]}")
+      [[ -n "$idx" ]] && MODULES+=("${combined_modules[$idx]}")
     done <<< "$selected"
 
     if [[ ${#MODULES[@]} -eq 0 ]]; then
