@@ -16,8 +16,19 @@ merge_json() {
     return
   fi
 
+  # Validate inputs before merging — jq failure here would otherwise
+  # truncate $output to empty via the redirect below.
+  if ! jq empty "$existing" 2>/dev/null; then
+    log_error "Cannot merge: $existing is not valid JSON. Leaving $output untouched."
+    return 1
+  fi
+  if ! jq empty "$incoming" 2>/dev/null; then
+    log_error "Cannot merge: $incoming is not valid JSON. Leaving $output untouched."
+    return 1
+  fi
+
   # Deep merge with jq: incoming values override existing, arrays are unioned
-  local merged
+  local merged jq_status
   merged=$(jq -s '
     def union_arrays: [.[0], .[1]] | add | unique;
     def deep_merge:
@@ -41,8 +52,14 @@ merge_json() {
       end;
     [.[0], .[1]] | deep_merge
   ' "$existing" "$incoming")
+  jq_status=$?
 
-  echo "$merged" > "$output"
+  if (( jq_status != 0 )) || [[ -z "$merged" ]]; then
+    log_error "Merge failed (jq exit=$jq_status). Leaving $output untouched."
+    return 1
+  fi
+
+  printf '%s\n' "$merged" > "$output"
 }
 
 # Merge a settings fragment into the existing settings.json
@@ -50,13 +67,26 @@ merge_settings_fragment() {
   local fragment="$1"  # JSON string, not a file
   local settings_file="$CLAUDE_HOME/settings.json"
 
+  # Validate the incoming fragment before touching anything.
+  if ! printf '%s' "$fragment" | jq empty 2>/dev/null; then
+    log_error "Cannot merge fragment: not valid JSON. Leaving $settings_file untouched."
+    return 1
+  fi
+
   if [[ ! -f "$settings_file" ]]; then
-    echo "$fragment" | jq '.' > "$settings_file"
+    printf '%s' "$fragment" | jq '.' > "$settings_file"
     return
   fi
 
-  local merged
-  merged=$(echo "$fragment" | jq -s '
+  # Validate existing settings — without this, jq fails and the redirect
+  # below would truncate the file to empty.
+  if ! jq empty "$settings_file" 2>/dev/null; then
+    log_error "Cannot merge: $settings_file is not valid JSON. Leaving it untouched."
+    return 1
+  fi
+
+  local merged jq_status
+  merged=$(printf '%s' "$fragment" | jq -s '
     def union_arrays: [.[0], .[1]] | add | unique;
     def deep_merge:
       if (.[0] | type) == "object" and (.[1] | type) == "object" then
@@ -79,8 +109,14 @@ merge_settings_fragment() {
       end;
     [.[0], .[1]] | deep_merge
   ' "$settings_file" -)
+  jq_status=$?
 
-  echo "$merged" > "$settings_file"
+  if (( jq_status != 0 )) || [[ -z "$merged" ]]; then
+    log_error "Settings fragment merge failed (jq exit=$jq_status). Leaving $settings_file untouched."
+    return 1
+  fi
+
+  printf '%s\n' "$merged" > "$settings_file"
 }
 
 # ── CLAUDE.md Section Merging ────────────────────────────────
