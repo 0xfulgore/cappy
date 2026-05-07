@@ -5,14 +5,16 @@
 Install once. Then just use `claude` normally in any project. The SDLC pipeline kicks in automatically.
 
 ```bash
-# Install
-git clone https://github.com/0xfulgore/cappy.git && cd cappy && ./install.sh
+# Install (one-liner)
+curl -fsSL https://raw.githubusercontent.com/0xfulgore/cappy/main/get-cappy.sh | bash
 
 # That's it. Now in ANY project:
 cd ~/your-project
 claude "Add a user dashboard with analytics"
 # Claude automatically: discovers → specs → designs → builds → reviews → validates
 ```
+
+The bootstrap clones the repo to `~/.cappy/repo/`, hands off to `cappy boot`, and from then on you manage everything with `cappy update`, `cappy status`, etc. Prefer the manual route? `git clone https://github.com/0xfulgore/cappy.git && cd cappy && ./install.sh` still works.
 
 The installer asks where your projects live (e.g., `~/Development`), installs a CLAUDE.md there, and Claude Code picks it up in every subdirectory. No scaffolding, no CLI tools, no team setup needed.
 
@@ -44,7 +46,17 @@ The installer asks where your projects live (e.g., `~/Development`), installs a 
 
 ## Quick Start
 
-### Install everything (interactive)
+### One-liner (interactive)
+```bash
+curl -fsSL https://raw.githubusercontent.com/0xfulgore/cappy/main/get-cappy.sh | bash
+```
+
+### Pin a branch
+```bash
+curl -fsSL https://raw.githubusercontent.com/0xfulgore/cappy/main/get-cappy.sh | CAPPY_BRANCH=develop bash
+```
+
+### Manual clone (still supported)
 ```bash
 git clone https://github.com/0xfulgore/cappy.git
 cd cappy
@@ -53,12 +65,14 @@ cd cappy
 
 ### Install specific modules
 ```bash
-./install.sh --modules core,statusline,hooks
+cappy install --modules core,auto-update,statusline,hooks
+# or, pre-install:  ./install.sh --modules ...
 ```
 
 ### Non-interactive (CI/automation)
 ```bash
-./install.sh --non-interactive --preset power-user
+cappy install --non-interactive --preset power-user
+# or:  ./install.sh --non-interactive --preset power-user
 ```
 
 ## Modules
@@ -245,7 +259,8 @@ Updates re-apply installed modules without touching your customizations. Cappy-m
 ## Uninstalling
 
 ```bash
-~/.cappy/repo/uninstall.sh
+cappy uninstall
+# or, directly:  ~/.cappy/repo/uninstall.sh
 ```
 
 This removes cappy-managed CLAUDE.md sections and hook files. Offers to restore from backup. Your settings.json is preserved (remove cappy entries manually if needed).

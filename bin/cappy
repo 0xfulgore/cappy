@@ -64,6 +64,22 @@ require_repo() {
   fi
 }
 
+# ── boot / install (full install flow) ──────────────────────
+# Both names dispatch to install.sh; "boot" reads naturally from the
+# curl-pipe bootstrap, "install" reads naturally from a user re-running
+# the flow on an existing checkout. They are aliases.
+cmd_boot() {
+  require_repo
+  cappy_splash
+  exec bash "$CAPPY_REPO/install.sh" "$@"
+}
+
+# ── uninstall ────────────────────────────────────────────────
+cmd_uninstall() {
+  require_repo
+  exec bash "$CAPPY_REPO/uninstall.sh" "$@"
+}
+
 # ── update ───────────────────────────────────────────────────
 cmd_update() {
   require_repo
@@ -163,7 +179,9 @@ cmd_help() {
   cappy_splash
   printf '   %sUsage:%s cappy <command> [flags]\n\n' "$BOLD" "$RST"
   printf '   %sCommands:%s\n' "$DIM" "$RST"
+  printf '     %sboot%s | %sinstall%s [...]              Run the full installer (modules, hooks, MCP)\n' "$BRIGHT_CYAN" "$RST" "$BRIGHT_CYAN" "$RST"
   printf '     %supdate%s [-y|--yes] [-f|--force]   Pull latest and re-run install\n' "$BRIGHT_CYAN" "$RST"
+  printf '     %suninstall%s                        Remove cappy-managed config (with backup)\n' "$BRIGHT_CYAN" "$RST"
   printf '     %sstatus%s                           Show local vs remote SHA, behind count\n' "$BRIGHT_CYAN" "$RST"
   printf '     %scheck%s                            Force a fresh update check now\n' "$BRIGHT_CYAN" "$RST"
   printf '     %sversion%s                          Print installed cappy version\n' "$BRIGHT_CYAN" "$RST"
@@ -177,10 +195,12 @@ cmd_help() {
 cmd="${1:-help}"
 shift || true
 case "$cmd" in
-  update)            cmd_update "$@" ;;
-  status)            cmd_status ;;
-  check)             cmd_check ;;
+  boot|install)         cmd_boot "$@" ;;
+  uninstall)            cmd_uninstall "$@" ;;
+  update)               cmd_update "$@" ;;
+  status)               cmd_status ;;
+  check)                cmd_check ;;
   version|-v|--version) cmd_version ;;
-  help|-h|--help|"") cmd_help ;;
+  help|-h|--help|"")    cmd_help ;;
   *) err "unknown command: $cmd"; cmd_help; exit 2 ;;
 esac
