@@ -20,17 +20,20 @@ The installer asks where your projects live (e.g., `~/Development`), installs a 
 
 ## What You Get
 
+16 modules; install all or pick a subset.
+
 | Module | Description |
 |--------|-------------|
-| **core** | SDLC pipeline + 15 mechanical overrides — the engine that drives everything |
+| **core** | SDLC pipeline + 18 mechanical overrides (15 numbered rules + Linear ticket workflow, Ruflo swarm preference, mandatory swarm-split threshold) — the engine that drives everything |
 | **statusline** | Animated status bar: model, context %, git, task progress, cost, ETA |
 | **settings** | settings.json presets — power-user, cautious, team-lead |
 | **hooks** | Post-edit typecheck, auto-lint, pre-commit gate, file guard |
+| **hedge-detector** | Stop hook that rejects hedging language ("probably", "I think", "seems", "could be") in assistant output |
 | **git-safety** | Block force-push to main, conventional commit format hints |
-| **mcp** | MCP servers: GitHub, PostgreSQL, Playwright |
-| **teams** | 14 agent swarm templates: product SDLC, audit sweep, migration squad, perf clinic, test factory, dependency upgrade, incident responder, onboarding guide, API versioning, monorepo splitter, fullstack API, code review, docs sprint, refactor squad |
+| **mcp** | MCP servers: GitHub, Linear (OAuth), PostgreSQL, Playwright |
+| **teams** | 14 agent swarm templates (see below) — installs `~/.cappy/scaffold-team.sh` |
 | **skills** | Task progress dashboard, skill discovery |
-| **templates** | Project CLAUDE.md generators: React, Rust, Python, Expo, generic |
+| **templates** | Project CLAUDE.md generators: React, Rust, Python, Expo, generic — installs `~/.cappy/scaffold-project.sh` |
 | **performance** | Perf directives: bundle size, N+1 queries, lazy loading, pagination |
 | **accessibility** | WCAG 2.2 AA: keyboard nav, screen readers, contrast, touch targets |
 | **devops** | CI/CD awareness, env var safety, Docker best practices, migrations |
@@ -61,23 +64,39 @@ cd cappy
 
 ### Core: CLAUDE.md Mechanical Overrides
 
-15 composable rules that make Claude Code produce production-grade code:
+Composable rules that make Claude Code produce production-grade code. Each rule is a separately-toggleable section in your CLAUDE.md.
 
+**Pre-Work**
 1. **Evidence Before Explanation** — First action must be a tool call gathering evidence; no causal claims without citations
 2. **Step 0 Cleanup** — Remove dead code before refactoring
 3. **Phased Execution** — Max 5 files per phase, verify between phases
+
+**Code Quality**
 4. **Senior Dev Override** — Fix architectural flaws, don't just follow orders
 5. **Fix As You Go** — Broken thing found mid-task gets fixed immediately, no defer lists
 6. **Forced Verification** — Must run type-check + lint before declaring done
+6a. **Linear Ticket Workflow** — Auto-claim, set in-progress, comment on blockers, transition to user's chosen terminal status; attach PR/branch URLs
+
+**Context Management**
 7. **Sub-Agent Swarming** — Parallel agents for tasks >5 files
+7a. **Prefer Ruflo Swarms For Team Work** — Route team/swarm work through Ruflo if its tools/skills are present; fall back to native `TeamCreate` only when not
+7b. **Mandatory Swarm Split For Large Bodies of Work** — Force a swarm when work exceeds any of: >10 files, >300 LOC, >8 design tasks, >2h, or >2 subsystems
 8. **Context Decay Awareness** — Re-read files after 10+ messages
 9. **File Read Budget** — 2000 line cap, chunk large files
 10. **Tool Result Blindness** — Detect truncated results, narrow scope
+
+**Edit Safety**
 11. **Edit Integrity** — Read before/after every edit, verify changes applied
 12. **No Semantic Search** — Grep isn't AST; search all reference types separately
+
+**Definition of Done**
 13. **Verify Before Claiming Done** — Read actual output yourself; never trust "agent said done"
 14. **Definition of Done** — Type-check, lint, test, build, coverage gates must ALL pass
+
+**Default Workflow**
 15. **SDLC by Default** — All non-trivial tasks follow the 6-phase pipeline (discovery → spec → design → build → review → validate) with user approval gates. Skip with "just do it"
+
+The `performance`, `accessibility`, `devops`, and `api-design` modules add four more rule clusters (16–19) on top of core when installed.
 
 ### Statusline
 
@@ -96,6 +115,18 @@ Animated terminal status bar with:
 | `post-edit-lint.sh` | After file edits | Auto-runs ESLint/Biome/Ruff/Clippy |
 | `pre-commit-check.sh` | Before `git commit` | Type-check + lint + tests gate |
 | `file-guard.sh` | Before file writes | Blocks edits to .env, credentials, keys |
+| `hedge-rejector.mjs` | Stop event | Rejects hedging language ("probably", "I think", "seems") in assistant output (separate `hedge-detector` module) |
+
+### MCP Servers
+
+The `mcp` module configures MCP servers for Claude Code on a per-server-opt-in basis. Choose any subset during install:
+
+| Server | What it provides | Auth |
+|--------|------------------|------|
+| **GitHub** | PR/issue management, code search | Token from `gh auth` or env |
+| **Linear** | Ticket claim, transition, comment, link PRs (used by rule 6a) | OAuth via browser |
+| **PostgreSQL** | Database queries and exploration | Connection string |
+| **Playwright** | Browser automation and testing | None |
 
 ### Team Templates
 
@@ -198,18 +229,21 @@ This removes cappy-managed CLAUDE.md sections and hook files. Offers to restore 
 
 ## How It Works
 
-- **Non-destructive**: Always backs up existing configs before modifying
-- **Marker-based CLAUDE.md**: Sections wrapped in `<!-- cappy:section:NAME -->` markers enable surgical updates
-- **JSON merging**: Settings are deep-merged via `jq` — arrays unioned, objects recursively merged
-- **File collision detection**: SHA256 comparison — identical files skipped, conflicts prompt user
-- **Module manifests**: Each module has a `module.json` declaring its files, targets, and dependencies
+- **Non-destructive**: Always backs up existing configs to `~/.claude/backups/cappy-<timestamp>/` before modifying
+- **Marker-based CLAUDE.md**: Sections wrapped in `<!-- cappy:section:NAME -->` markers enable surgical updates — your hand-written content outside the managed block is preserved
+- **JSON merging**: Settings are deep-merged via `jq` — arrays unioned, objects recursively merged. Inputs are validated up front; a malformed `settings.json` aborts the merge with a clear error rather than truncating your file
+- **File collision detection**: SHA256 comparison — identical files skipped, conflicts prompt user (skip / overwrite / keep both as `.bak`)
+- **Module manifests**: Each module has a `module.json` declaring its files, targets, settings fragment, and dependencies
+- **Idempotent**: Re-running the installer is safe — already-installed bits are detected and skipped (e.g., MemPalace pip package, MCP servers)
 
 ## Requirements
 
 - Claude Code CLI installed
 - `jq` (installer offers to install it)
-- `bash` 4+ (macOS ships 3.2 — `brew install bash` if needed)
-- `git` for curl-pipe install and updates
+- `bash` 3.2+ — works with the macOS-shipped bash; bash 4+ also fine
+- `git` for clone-based install and updates
+- `node` (only for the `hedge-detector` module)
+- `python3` + `pipx` (only for the `mempalace` module — installer auto-installs `pipx` if missing)
 
 ## License
 
