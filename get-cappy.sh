@@ -48,11 +48,40 @@ done
 # ── Clone or update ──────────────────────────────────────────
 if [[ -d "$CAPPY_REPO/.git" ]]; then
   step "Cappy repo already at $CAPPY_REPO — pulling latest"
-  if ! git -C "$CAPPY_REPO" pull --ff-only --quiet; then
-    err "git pull failed (non-fast-forward?). Resolve in $CAPPY_REPO and re-run."
-    exit 2
+
+  # The canonical clone is machine-managed — users shouldn't be
+  # editing it directly. If we find dirty state (typical cause: an
+  # earlier failed install or someone testing locally), stash it
+  # automatically so we can fast-forward. The stash is recoverable
+  # via `git -C ~/.cappy/repo stash list`. Better than aborting and
+  # telling the user to fix a directory they don't own.
+  if [[ -n "$(git -C "$CAPPY_REPO" status --porcelain)" ]]; then
+    info "Local changes detected in $CAPPY_REPO — auto-stashing before pull"
+    if ! git -C "$CAPPY_REPO" stash push --include-untracked \
+         -m "cappy auto-rescue $(date +%Y%m%d-%H%M%S)" --quiet; then
+      err "could not stash local changes in $CAPPY_REPO"
+      err "recover manually: cd $CAPPY_REPO && git status"
+      exit 2
+    fi
+    ok "stashed (recover via: git -C $CAPPY_REPO stash list)"
   fi
-  ok "up to date"
+
+  if ! git -C "$CAPPY_REPO" pull --ff-only --quiet; then
+    # Still failing after stash — likely diverged history. Last
+    # resort: hard-reset to origin/main. The clone is meant to be
+    # canonical, so any divergence here is unexpected and recoverable
+    # via the stash above (if that's what was lost).
+    info "fast-forward failed — resetting to origin/$CAPPY_BRANCH"
+    if ! git -C "$CAPPY_REPO" fetch --quiet origin "$CAPPY_BRANCH" || \
+       ! git -C "$CAPPY_REPO" reset --hard --quiet "origin/$CAPPY_BRANCH"; then
+      err "could not sync $CAPPY_REPO with origin/$CAPPY_BRANCH"
+      err "wipe and reclone: rm -rf $CAPPY_REPO && rerun this command"
+      exit 2
+    fi
+    ok "reset to origin/$CAPPY_BRANCH"
+  else
+    ok "up to date"
+  fi
 else
   step "Cloning Cappy → $CAPPY_REPO"
   mkdir -p "$CAPPY_HOME"
