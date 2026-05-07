@@ -57,11 +57,23 @@ ok()   { printf '%s[ ok]%s  %s\n' "$GREEN" "$RST" "$*"; }
 info() { printf '%s[info]%s %s\n' "$CYAN" "$RST" "$*"; }
 
 require_repo() {
-  if [[ ! -d "$CAPPY_REPO/.git" ]]; then
-    err "Cappy repo not found at $CAPPY_REPO"
-    info "Reinstall: git clone https://github.com/0xfulgore/cappy.git ~/.cappy/repo && bash ~/.cappy/repo/install.sh"
-    exit 2
+  if [[ -d "$CAPPY_REPO/.git" ]]; then
+    return
   fi
+  # Specific diagnostics so the user knows what happened.
+  if [[ -L "$CAPPY_REPO" ]] && [[ ! -e "$CAPPY_REPO" ]]; then
+    err "$CAPPY_REPO is a dangling symlink — its source was moved or deleted."
+    info "This usually means cappy was installed with --link and the source clone is gone."
+  elif [[ -L "$CAPPY_REPO" ]]; then
+    err "$CAPPY_REPO is a symlink but its target has no .git — source is broken."
+  elif [[ ! -e "$CAPPY_REPO" ]]; then
+    err "$CAPPY_REPO doesn't exist."
+  else
+    err "$CAPPY_REPO exists but isn't a git checkout."
+  fi
+  info "Reinstall:"
+  info "  curl -fsSL https://raw.githubusercontent.com/0xfulgore/cappy/main/get-cappy.sh | bash"
+  exit 2
 }
 
 # ── boot / install (full install flow) ──────────────────────
@@ -131,32 +143,47 @@ cmd_status() {
     cat "$STATUS_FILE"
     return
   fi
-  local installed latest avail dirty cur_sha checked branch
+  local installed latest avail dirty cur_sha latest_sha checked branch mode behind
+  mode=$(jq -r '.mode // "tag"' "$STATUS_FILE")
   installed=$(jq -r '.installed_version // "?"' "$STATUS_FILE")
   latest=$(jq -r '.latest_version // ""' "$STATUS_FILE")
   avail=$(jq -r '.available // false' "$STATUS_FILE")
   dirty=$(jq -r '.dirty // false' "$STATUS_FILE")
   cur_sha=$(jq -r '.current_sha[0:8] // "?"' "$STATUS_FILE")
+  latest_sha=$(jq -r '.latest_sha[0:8] // ""' "$STATUS_FILE")
+  behind=$(jq -r '.behind_count // 0' "$STATUS_FILE")
   checked=$(jq -r '.checked_at // "?"' "$STATUS_FILE")
   branch=$(jq -r '.branch // "?"' "$STATUS_FILE")
 
   printf '\n'
+  printf '  %smode%s        %s%s\n' "$DIM" "$RST" "$mode" \
+    "$([[ "$mode" == "commit" ]] && printf ' %s(no releases tagged yet — tracking %s)%s' "$DIM" "$branch" "$RST" || true)"
   printf '  %sinstalled%s   %s\n' "$DIM" "$RST" "$installed"
-  printf '  %slatest%s      %s\n' "$DIM" "$RST" "${latest:-(no release tagged yet)}"
+  if [[ "$mode" == "tag" ]]; then
+    printf '  %slatest%s      %s\n' "$DIM" "$RST" "${latest:-(unknown)}"
+  else
+    printf '  %slatest%s      %s (commit on %s)\n' "$DIM" "$RST" "${latest_sha:-?}" "$branch"
+  fi
   printf '  %sbranch%s      %s\n' "$DIM" "$RST" "$branch"
   printf '  %scurrent%s     %s (commit)\n' "$DIM" "$RST" "$cur_sha"
   printf '  %sdirty%s       %s\n' "$DIM" "$RST" "$dirty"
   printf '  %schecked%s     %s\n' "$DIM" "$RST" "$checked"
+
   if [[ "$avail" == "true" ]]; then
-    printf '\n  %s%s↑ update available%s — %s%s%s → %s%s%s — run: %s%scappy update%s\n\n' \
-      "$BRIGHT_CYAN" "$BOLD" "$RST" \
-      "$DIM" "$installed" "$RST" \
-      "$BOLD" "$latest" "$RST" \
-      "$BOLD" "$BRIGHT_CYAN" "$RST"
-  elif [[ -z "$latest" ]]; then
-    printf '\n  %s· no release tagged yet (you are running %s on commit %s)%s\n\n' "$DIM" "$installed" "$cur_sha" "$RST"
+    if [[ "$mode" == "tag" ]]; then
+      printf '\n  %s%s↑ update available%s — %s%s%s → %s%s%s — run: %s%scappy update%s\n\n' \
+        "$BRIGHT_CYAN" "$BOLD" "$RST" \
+        "$DIM" "$installed" "$RST" \
+        "$BOLD" "$latest" "$RST" \
+        "$BOLD" "$BRIGHT_CYAN" "$RST"
+    else
+      printf '\n  %s%s↑ update available%s — %s+%s commits on %s%s — run: %s%scappy update%s\n\n' \
+        "$BRIGHT_CYAN" "$BOLD" "$RST" \
+        "$BOLD" "$behind" "$branch" "$RST" \
+        "$BOLD" "$BRIGHT_CYAN" "$RST"
+    fi
   else
-    printf '\n  %s✓ up to date (%s)%s\n\n' "$GREEN" "$installed" "$RST"
+    printf '\n  %s✓ up to date%s\n\n' "$GREEN" "$RST"
   fi
 }
 

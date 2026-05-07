@@ -35,6 +35,12 @@ Options:
   --claude-md PATH  Where to install CLAUDE.md (default: current directory)
   --no-backup       Skip backup step
   --non-interactive Skip all prompts, use defaults
+  --link            Dev mode: symlink ~/.cappy/repo → this clone
+                    instead of cloning fresh. Cappy will break if you
+                    delete or move this clone — use only for cappy
+                    development. Without --link, the default is to
+                    clone the remote into ~/.cappy/repo so cappy is
+                    self-contained.
   --help            Show this help
 
 Examples:
@@ -84,6 +90,7 @@ parse_args() {
   CAPPY_CLAUDE_MD_TARGET=""
   CAPPY_SKIP_BACKUP=0
   CAPPY_NON_INTERACTIVE=""
+  CAPPY_LINK_MODE=0
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -92,6 +99,7 @@ parse_args() {
       --claude-md)   CAPPY_CLAUDE_MD_TARGET="$2"; shift 2 ;;
       --no-backup)   CAPPY_SKIP_BACKUP=1; shift ;;
       --non-interactive) CAPPY_NON_INTERACTIVE=1; shift ;;
+      --link)        CAPPY_LINK_MODE=1; shift ;;
       --help)        print_usage; exit 0 ;;
       *)             printf "Unknown option: %s\n" "$1"; print_usage; exit 1 ;;
     esac
@@ -360,41 +368,119 @@ print_summary() {
 }
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Canonical-repo symlink
+# Canonical-repo location
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#
+# Cappy needs a stable on-disk location that survives the user
+# deleting or moving the source they ran install.sh from. We default
+# to a self-contained clone at ~/.cappy/repo. --link opts into a
+# symlink for cappy maintainers (footgun: deleting the source breaks
+# the install).
 
-ensure_cappy_repo_symlink() {
+# Real-path comparison that works whether realpath exists or not.
+_cappy_same_path() {
+  local a b
+  if command -v realpath >/dev/null 2>&1; then
+    a=$(realpath "$1" 2>/dev/null) || return 1
+    b=$(realpath "$2" 2>/dev/null) || return 1
+  else
+    a=$(cd "$1" 2>/dev/null && pwd -P) || return 1
+    b=$(cd "$2" 2>/dev/null && pwd -P) || return 1
+  fi
+  [[ "$a" == "$b" ]]
+}
+
+# Symlink path (--link mode). Warns about fragility.
+_cappy_link_repo() {
+  local target="$1"
+  log_warn "Dev mode: symlinking $target → $CAPPY_DIR"
+  log_warn "If you delete or move $CAPPY_DIR, cappy will break."
+  log_warn "To switch to a self-contained install: bash $CAPPY_DIR/install.sh (without --link)"
+  rm -f "$target" 2>/dev/null || true
+  ln -s "$CAPPY_DIR" "$target"
+  log_success "linked $target → $CAPPY_DIR"
+}
+
+# Fresh clone path (default). Pulls if target already a real clone.
+# Re-execs install.sh from the canonical path so the rest of the run
+# operates on the self-contained copy, not the source.
+ensure_cappy_repo() {
   local home="$HOME/.cappy"
   local target="$home/repo"
   mkdir -p "$home"
 
-  # Already a symlink — refresh it (handles the user moving their clone).
-  if [[ -L "$target" ]]; then
-    ln -sfn "$CAPPY_DIR" "$target"
+  # Already running from the canonical path — nothing to canonicalize.
+  if _cappy_same_path "$CAPPY_DIR" "$target"; then
     return
   fi
 
-  # Real directory — only safe to act on if it's the same repo
-  if [[ -d "$target" ]]; then
-    if command -v realpath >/dev/null 2>&1; then
-      if [[ "$(realpath "$target")" == "$(realpath "$CAPPY_DIR")" ]]; then
-        return  # already the same dir, nothing to do
+  # Re-entry guard so we don't loop after exec.
+  if [[ "${CAPPY_REPO_CANONICAL:-}" == "1" ]]; then
+    return
+  fi
+
+  # --link opt-in: symlink and continue from the source (no re-exec).
+  if (( ${CAPPY_LINK_MODE:-0} )); then
+    if [[ -L "$target" ]]; then
+      _cappy_link_repo "$target"
+    elif [[ -d "$target" ]]; then
+      log_warn "$target exists as a real directory — refusing to replace with a symlink"
+      log_warn "remove it first if you really want --link mode: rm -rf $target"
+      exit 1
+    elif [[ -e "$target" ]]; then
+      log_warn "$target exists and isn't a directory or symlink — skipping --link"
+      exit 1
+    else
+      _cappy_link_repo "$target"
+    fi
+    return
+  fi
+
+  # Default: clone-fresh (or pull if a real clone already exists)
+  if [[ -L "$target" ]]; then
+    log_info "Replacing existing symlink at $target with a fresh clone"
+    rm -f "$target"
+  fi
+
+  if [[ -d "$target/.git" ]]; then
+    log_step "Updating canonical clone at $target"
+    if ! git -C "$target" pull --ff-only --quiet; then
+      log_warn "git pull failed in $target — continuing with what's there"
+    fi
+  elif [[ -d "$target" ]]; then
+    log_error "$target exists but isn't a git checkout — refusing to clobber"
+    log_info "If it's safe to remove: rm -rf $target && rerun this installer"
+    exit 1
+  else
+    local remote branch
+    remote=$(git -C "$CAPPY_DIR" config --get remote.origin.url 2>/dev/null || true)
+    branch=$(git -C "$CAPPY_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)
+
+    if [[ -z "$remote" ]]; then
+      log_warn "No git remote in $CAPPY_DIR — copying tree to $target"
+      cp -R "$CAPPY_DIR" "$target"
+    else
+      log_step "Cloning $remote → $target (self-contained install)"
+      if ! git clone --quiet --branch "$branch" "$remote" "$target" 2>/dev/null; then
+        # Branch might not exist on remote (e.g., local-only feature branch).
+        # Fall back to default branch.
+        if ! git clone --quiet "$remote" "$target"; then
+          log_error "git clone failed for $remote"
+          log_info "Pass --link to use the source clone in-place instead (fragile)"
+          exit 1
+        fi
+        log_warn "Branch '$branch' not on remote — using default branch in $target"
       fi
     fi
-    log_warn "$target exists as a real directory and isn't $CAPPY_DIR"
-    log_info "leaving it alone — the cappy shim and statusline will read from there, not from $CAPPY_DIR"
-    log_info "to switch: rm -rf $target && bash $CAPPY_DIR/install.sh"
-    return
   fi
 
-  # Some other file (regular file, broken link, socket, ...) — refuse to clobber.
-  if [[ -e "$target" ]]; then
-    log_warn "$target exists and isn't a directory or symlink — skipping"
-    return
+  if [[ -n "$(git -C "$CAPPY_DIR" status --porcelain 2>/dev/null)" ]]; then
+    log_warn "$CAPPY_DIR has uncommitted changes."
+    log_warn "Those won't be in $target until you commit, push, then run 'cappy update'."
   fi
 
-  ln -s "$CAPPY_DIR" "$target"
-  log_success "linked $target → $CAPPY_DIR"
+  log_step "Continuing install from $target"
+  exec env CAPPY_REPO_CANONICAL=1 bash "$target/install.sh" "$@"
 }
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -418,19 +504,17 @@ main() {
   # shellcheck source=lib/modules.sh
   source "$CAPPY_DIR/lib/modules.sh"
 
+  # Canonicalize first — this may exec from ~/.cappy/repo and never
+  # return. After this call, CAPPY_DIR is guaranteed to be the install
+  # location cappy will keep using.
+  ensure_cappy_repo "$@"
+
   CAPPY_MODULES_DIR="${CAPPY_DIR}/modules"
   export CAPPY_MODULES_DIR
 
-  # Tell child processes (post_install hooks etc.) where the repo is.
-  # Without this they default to ~/.cappy/repo which only exists for
-  # curl-pipe installs — manual clones live wherever the user put them.
+  # Tell post_install hooks (e.g. auto-update/setup.sh) where the repo
+  # is so they don't have to guess.
   export CAPPY_REPO="$CAPPY_DIR"
-
-  # Make ~/.cappy/repo the canonical path (symlink to actual location)
-  # so the cappy shim, lib/update-check.sh, and statusline always know
-  # where to look. Idempotent: refresh existing symlinks, never clobber
-  # an unrelated real directory.
-  ensure_cappy_repo_symlink
 
 
   # Phase 1: Environment Detection

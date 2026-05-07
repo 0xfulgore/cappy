@@ -63,6 +63,16 @@ cd cappy
 ./install.sh
 ```
 
+This clones a self-contained copy to `~/.cappy/repo` and installs from there. Your `cd`-ed clone can be deleted afterwards — cappy survives.
+
+### Dev mode (cappy maintainers)
+```bash
+cd /path/to/your/cappy/clone
+./install.sh --link
+```
+
+Symlinks `~/.cappy/repo` → your clone instead of cloning fresh. Edits to your clone are live in cappy. **Footgun**: if you delete or move the clone, cappy breaks. Re-run without `--link` to switch back to a self-contained install.
+
 ### Install specific modules
 ```bash
 cappy install --modules core,auto-update,statusline,hooks
@@ -267,7 +277,9 @@ This removes cappy-managed CLAUDE.md sections and hook files. Offers to restore 
 
 ## Versioning & Releases
 
-Cappy follows [semantic versioning](https://semver.org/). The auto-update notifier is **release-based** — only published tags trigger the `↑ cappy v1.2.3` segment in your statusline. Bug-fix commits between releases don't nag users until you cut a new tag.
+Cappy follows [semantic versioning](https://semver.org/). The auto-update notifier is **release-based** — published tags trigger the `↑ cappy v1.2.3` segment in your statusline. Bug-fix commits between releases don't nag users until you cut a new tag.
+
+**Pre-release fallback**: if no semver tags exist on the remote yet, the notifier falls back to **commit mode** — it shows `↑ cappy +N` (commits behind upstream `main`) so early adopters still see updates. The moment any `vX.Y.Z` tag lands, the notifier auto-switches to tag mode on the next 24 h check.
 
 | Bump | When to use | Examples |
 |------|-------------|----------|

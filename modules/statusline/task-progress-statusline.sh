@@ -183,16 +183,26 @@ if [ -x "$cappy_check_script" ]; then
   fi
   if [ -f "$cappy_status_file" ] && command -v jq >/dev/null 2>&1; then
     cappy_avail=$(jq -r '.available // false' "$cappy_status_file" 2>/dev/null)
+    cappy_mode=$(jq -r '.mode // "tag"' "$cappy_status_file" 2>/dev/null)
     cappy_latest=$(jq -r '.latest_version // ""' "$cappy_status_file" 2>/dev/null)
-    if [ "$cappy_avail" = "true" ] && [ -n "$cappy_latest" ]; then
+    cappy_behind=$(jq -r '.behind_count // 0' "$cappy_status_file" 2>/dev/null)
+    if [ "$cappy_avail" = "true" ]; then
+      # tag mode → "↑ cappy v1.2.3"; commit mode → "↑ cappy +N"
+      if [ "$cappy_mode" = "tag" ] && [ -n "$cappy_latest" ]; then
+        cappy_label="↑ cappy ${cappy_latest}"
+        cappy_key="${cappy_latest}"
+      else
+        cappy_label="↑ cappy +${cappy_behind}"
+        cappy_key="commit-${cappy_behind}"
+      fi
       cappy_today=$(date +%Y-%m-%d)
-      cappy_notif="$HOME/.cappy/.notified-${cappy_today}-${cappy_latest}"
+      cappy_notif="$HOME/.cappy/.notified-${cappy_today}-${cappy_key}"
       if [ ! -f "$cappy_notif" ]; then
-        parts+=("${BRIGHT_CYAN}${BOLD}↑ cappy ${cappy_latest}${RST}")
+        parts+=("${BRIGHT_CYAN}${BOLD}${cappy_label}${RST}")
         touch "$cappy_notif" 2>/dev/null || true
         find "$HOME/.cappy" -maxdepth 1 -name '.notified-*' -mtime +2 -delete 2>/dev/null || true
       else
-        parts+=("${MAGENTA}↑ cappy ${cappy_latest}${RST}")
+        parts+=("${MAGENTA}${cappy_label}${RST}")
       fi
     fi
   fi
