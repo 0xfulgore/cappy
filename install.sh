@@ -5,6 +5,15 @@ set -euo pipefail
 # Cappy — Claude Code Power-User Toolkit Installer
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+# Reattach stdin to the controlling TTY when invoked via a pipe
+# (e.g. `curl … | bash` or `bash install.sh < /dev/null`). Without
+# this, the first interactive `read` hits EOF and `set -e` silently
+# kills the installer — which is exactly the bug users hit when
+# re-running the curl-pipe bootstrap on an existing install.
+if [[ ! -t 0 ]] && (exec < /dev/tty) 2>/dev/null; then
+  exec < /dev/tty
+fi
+
 CAPPY_VERSION="1.0.0"
 CAPPY_REPO="https://github.com/garyshannon/cappy.git"
 
