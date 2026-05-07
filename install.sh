@@ -360,6 +360,44 @@ print_summary() {
 }
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Canonical-repo symlink
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ensure_cappy_repo_symlink() {
+  local home="$HOME/.cappy"
+  local target="$home/repo"
+  mkdir -p "$home"
+
+  # Already a symlink — refresh it (handles the user moving their clone).
+  if [[ -L "$target" ]]; then
+    ln -sfn "$CAPPY_DIR" "$target"
+    return
+  fi
+
+  # Real directory — only safe to act on if it's the same repo
+  if [[ -d "$target" ]]; then
+    if command -v realpath >/dev/null 2>&1; then
+      if [[ "$(realpath "$target")" == "$(realpath "$CAPPY_DIR")" ]]; then
+        return  # already the same dir, nothing to do
+      fi
+    fi
+    log_warn "$target exists as a real directory and isn't $CAPPY_DIR"
+    log_info "leaving it alone — the cappy shim and statusline will read from there, not from $CAPPY_DIR"
+    log_info "to switch: rm -rf $target && bash $CAPPY_DIR/install.sh"
+    return
+  fi
+
+  # Some other file (regular file, broken link, socket, ...) — refuse to clobber.
+  if [[ -e "$target" ]]; then
+    log_warn "$target exists and isn't a directory or symlink — skipping"
+    return
+  fi
+
+  ln -s "$CAPPY_DIR" "$target"
+  log_success "linked $target → $CAPPY_DIR"
+}
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Main
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -382,6 +420,18 @@ main() {
 
   CAPPY_MODULES_DIR="${CAPPY_DIR}/modules"
   export CAPPY_MODULES_DIR
+
+  # Tell child processes (post_install hooks etc.) where the repo is.
+  # Without this they default to ~/.cappy/repo which only exists for
+  # curl-pipe installs — manual clones live wherever the user put them.
+  export CAPPY_REPO="$CAPPY_DIR"
+
+  # Make ~/.cappy/repo the canonical path (symlink to actual location)
+  # so the cappy shim, lib/update-check.sh, and statusline always know
+  # where to look. Idempotent: refresh existing symlinks, never clobber
+  # an unrelated real directory.
+  ensure_cappy_repo_symlink
+
 
   # Phase 1: Environment Detection
   log_step "Phase 1: Environment Detection"

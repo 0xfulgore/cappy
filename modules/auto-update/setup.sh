@@ -8,7 +8,26 @@
 set -euo pipefail
 
 CAPPY_HOME="${CAPPY_HOME:-$HOME/.cappy}"
-CAPPY_REPO="${CAPPY_REPO:-$CAPPY_HOME/repo}"
+
+# Prefer CAPPY_REPO from env (install.sh exports it). Fall back to the
+# canonical ~/.cappy/repo (curl-pipe install). Last resort: derive from
+# this script's location (we sit at <repo>/modules/auto-update/setup.sh).
+if [[ -z "${CAPPY_REPO:-}" || ! -d "${CAPPY_REPO}/.git" && ! -f "${CAPPY_REPO}/forge.json" ]]; then
+  if [[ -d "$CAPPY_HOME/repo/.git" ]] || [[ -f "$CAPPY_HOME/repo/forge.json" ]]; then
+    CAPPY_REPO="$CAPPY_HOME/repo"
+  else
+    derived="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    if [[ -f "$derived/forge.json" ]]; then
+      CAPPY_REPO="$derived"
+    fi
+  fi
+fi
+
+if [[ -z "${CAPPY_REPO:-}" ]] || [[ ! -f "$CAPPY_REPO/forge.json" ]]; then
+  printf '[err]  cannot locate cappy repo — set CAPPY_REPO env var to the repo root\n' >&2
+  exit 1
+fi
+
 SHIM="$CAPPY_REPO/bin/cappy"
 CHECKER="$CAPPY_REPO/lib/update-check.sh"
 
