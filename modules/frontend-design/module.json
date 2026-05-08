@@ -1,0 +1,11 @@
+{
+  "name": "frontend-design",
+  "version": "1.0.0",
+  "description": "frontend-design: Anthropic's production frontend skill (anthropics/claude-code)",
+  "requires": [],
+  "conflicts": [],
+  "files": [],
+  "install_type": "files",
+  "settings_merge": {},
+  "post_install": "bash setup-frontend-design.sh"
+}

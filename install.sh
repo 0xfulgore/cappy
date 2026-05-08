@@ -160,6 +160,7 @@ _cappy_all_modules() {
 _cappy_optional_modules() {
   printf '%s\n' \
     huashu-design \
+    frontend-design \
     cua-driver
 }
 
@@ -185,6 +186,7 @@ _cappy_module_description() {
     ruflo)          printf 'Ruflo agent platform: marketplace + 8 plugins + MCP server' ;;
     mempalace)      printf 'MemPalace local-first AI memory (pip + MCP server, user scope)' ;;
     huashu-design)  printf 'HTML hi-fi prototyping skill (huashu-design @ alchaincyf)' ;;
+    frontend-design) printf 'Anthropic production frontend skill (anthropics/claude-code)' ;;
     cua-driver)     printf 'macOS app driver: AX-tree + CLI/MCP (cua-driver @ trycua)' ;;
     *)              printf '%s' "$1" ;;
   esac
