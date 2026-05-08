@@ -167,45 +167,29 @@ cmd_status() {
     cat "$STATUS_FILE"
     return
   fi
-  local installed latest avail dirty cur_sha latest_sha checked branch mode behind
-  mode=$(jq -r '.mode // "tag"' "$STATUS_FILE")
+  local installed latest avail dirty cur_sha checked branch
   installed=$(jq -r '.installed_version // "?"' "$STATUS_FILE")
   latest=$(jq -r '.latest_version // ""' "$STATUS_FILE")
   avail=$(jq -r '.available // false' "$STATUS_FILE")
   dirty=$(jq -r '.dirty // false' "$STATUS_FILE")
   cur_sha=$(jq -r '.current_sha[0:8] // "?"' "$STATUS_FILE")
-  latest_sha=$(jq -r '.latest_sha[0:8] // ""' "$STATUS_FILE")
-  behind=$(jq -r '.behind_count // 0' "$STATUS_FILE")
   checked=$(jq -r '.checked_at // "?"' "$STATUS_FILE")
   branch=$(jq -r '.branch // "?"' "$STATUS_FILE")
 
   printf '\n'
-  printf '  %smode%s        %s%s\n' "$DIM" "$RST" "$mode" \
-    "$([[ "$mode" == "commit" ]] && printf ' %s(no releases tagged yet — tracking %s)%s' "$DIM" "$branch" "$RST" || true)"
   printf '  %sinstalled%s   %s\n' "$DIM" "$RST" "$installed"
-  if [[ "$mode" == "tag" ]]; then
-    printf '  %slatest%s      %s\n' "$DIM" "$RST" "${latest:-(unknown)}"
-  else
-    printf '  %slatest%s      %s (commit on %s)\n' "$DIM" "$RST" "${latest_sha:-?}" "$branch"
-  fi
+  printf '  %slatest%s      %s\n' "$DIM" "$RST" "${latest:-(no releases tagged yet)}"
   printf '  %sbranch%s      %s\n' "$DIM" "$RST" "$branch"
   printf '  %scurrent%s     %s (commit)\n' "$DIM" "$RST" "$cur_sha"
   printf '  %sdirty%s       %s\n' "$DIM" "$RST" "$dirty"
   printf '  %schecked%s     %s\n' "$DIM" "$RST" "$checked"
 
   if [[ "$avail" == "true" ]]; then
-    if [[ "$mode" == "tag" ]]; then
-      printf '\n  %s%s↑ update available%s — %s%s%s → %s%s%s — run: %s%scappy update%s\n\n' \
-        "$BRIGHT_CYAN" "$BOLD" "$RST" \
-        "$DIM" "$installed" "$RST" \
-        "$BOLD" "$latest" "$RST" \
-        "$BOLD" "$BRIGHT_CYAN" "$RST"
-    else
-      printf '\n  %s%s↑ update available%s — %s+%s commits on %s%s — run: %s%scappy update%s\n\n' \
-        "$BRIGHT_CYAN" "$BOLD" "$RST" \
-        "$BOLD" "$behind" "$branch" "$RST" \
-        "$BOLD" "$BRIGHT_CYAN" "$RST"
-    fi
+    printf '\n  %s%s↑ update available%s — %s%s%s → %s%s%s — run: %s%scappy update%s\n\n' \
+      "$BRIGHT_CYAN" "$BOLD" "$RST" \
+      "$DIM" "$installed" "$RST" \
+      "$BOLD" "$latest" "$RST" \
+      "$BOLD" "$BRIGHT_CYAN" "$RST"
   else
     printf '\n  %s✓ up to date%s\n\n' "$GREEN" "$RST"
   fi

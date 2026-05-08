@@ -56,35 +56,18 @@ if [[ -z "$installed_ver" || "$installed_ver" == "null" ]] && [[ -f "$CAPPY_REPO
 fi
 [[ -z "$installed_ver" || "$installed_ver" == "null" ]] && installed_ver="0.0.0"
 
-# ── Always grab upstream SHA: needed for commit-mode fallback ───
-upstream=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo "origin/$branch")
-upstream_branch="${upstream#*/}"
-remote_sha=$(git ls-remote --quiet "$remote_url" "refs/heads/$upstream_branch" 2>/dev/null | awk 'NR==1{print $1}' || true)
-
-# ── Decide mode: tag-based if any release exists, else commit-based ──
-mode="tag"
+# ── Tag-based comparison only ────────────────────────────────
+# Releases are the source of truth. If the remote has zero semver tags
+# (e.g. a fork pre-first-release), the checker stays silent — no commit
+# tracking, no notifications until someone tags a release.
 available=false
-behind=0
 
 if [[ -n "$latest_tag" ]]; then
-  # Tag-based: compare installed semver to highest remote tag
   inst_clean="${installed_ver#v}"
   latest_clean="${latest_tag#v}"
   if [[ "$inst_clean" != "$latest_clean" ]]; then
     newer=$(printf '%s\n%s\n' "$inst_clean" "$latest_clean" | sort -V | tail -n 1)
     [[ "$newer" == "$latest_clean" ]] && available=true
-  fi
-else
-  # Commit-mode fallback — no releases tagged yet on this remote.
-  # Notify on every push to upstream branch so users running pre-release
-  # cappy still see updates. Once any vX.Y.Z tag lands, we switch back
-  # to tag-based automatically.
-  mode="commit"
-  if [[ -n "$remote_sha" && "$remote_sha" != "$local_sha" ]]; then
-    available=true
-    git fetch --quiet origin "$upstream_branch" 2>/dev/null || true
-    behind=$(git rev-list --count "HEAD..$remote_sha" 2>/dev/null || echo 0)
-    [[ -z "$behind" ]] && behind=0
   fi
 fi
 
@@ -98,13 +81,10 @@ tmp="$STATUS_FILE.tmp.$$"
 cat > "$tmp" <<EOF
 {
   "checked_at": "$ts",
-  "mode": "$mode",
   "installed_version": "$installed_ver",
   "latest_version": "${latest_tag:-}",
-  "behind_count": $behind,
   "available": $available,
   "current_sha": "$local_sha",
-  "latest_sha": "${remote_sha:-}",
   "dirty": $dirty,
   "branch": "$branch",
   "remote_url": "$remote_url"
