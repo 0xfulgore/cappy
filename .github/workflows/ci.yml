@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Shell + JSON lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck jq
+
+      - name: bash -n syntax check (all .sh files)
+        run: |
+          set -e
+          fail=0
+          while IFS= read -r -d '' f; do
+            if ! bash -n "$f"; then
+              echo "::error file=$f::bash syntax error"
+              fail=1
+            fi
+          done < <(find . -name '*.sh' -not -path './.git/*' -print0)
+          exit "$fail"
+
+      - name: shellcheck top-level scripts
+        run: |
+          shellcheck -S warning install.sh uninstall.sh release.sh get-cappy.sh
+
+      - name: shellcheck lib/
+        run: |
+          shellcheck -S warning lib/*.sh
+
+      - name: Validate every module.json with jq
+        run: |
+          set -e
+          fail=0
+          while IFS= read -r -d '' f; do
+            if ! jq empty "$f" >/dev/null 2>&1; then
+              echo "::error file=$f::invalid JSON"
+              fail=1
+            fi
+          done < <(find modules -name 'module.json' -print0)
+          jq empty forge.json
+          exit "$fail"
+
+      - name: Validate forge.json schema (name, version, modules)
+        run: |
+          jq -e 'has("name") and has("version") and has("modules") and (.modules | type == "array")' forge.json

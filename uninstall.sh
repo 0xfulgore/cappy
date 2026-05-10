@@ -15,12 +15,15 @@ CAPPY_HOME="${HOME}/.cappy"
 CAPPY_INSTALLED_JSON="${CAPPY_HOME}/installed.json"
 CLAUDE_HOME="${HOME}/.claude"
 
+# shellcheck disable=SC2034
+{
 RST=$'\e[0m'
 RED=$'\e[31m'
 GREEN=$'\e[32m'
 YELLOW=$'\e[33m'
 CYAN=$'\e[36m'
 BOLD=$'\e[1m'
+}
 
 log_info()    { printf "%s[info]%s  %s\n" "$CYAN"   "$RST" "$*"; }
 log_success() { printf "%s[  ok]%s  %s\n" "$GREEN"  "$RST" "$*"; }
@@ -42,7 +45,8 @@ main() {
   log_info "Found cappy v${version}"
 
   # Remove cappy-managed sections from CLAUDE.md
-  local claude_md="$(pwd)/CLAUDE.md"
+  local claude_md
+  claude_md="$(pwd)/CLAUDE.md"
   if [[ -f "$claude_md" ]] && grep -q 'cappy:managed-start' "$claude_md"; then
     log_info "Removing cappy sections from CLAUDE.md"
     local before after

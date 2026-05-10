@@ -361,7 +361,8 @@ select_claude_md_target() {
   local default_dir=""
 
   # Check for existing CLAUDE.md up the tree (highest one wins)
-  local dir="$(pwd)"
+  local dir
+  dir="$(pwd)"
   while [[ "$dir" != "/" ]] && [[ "$dir" != "$HOME" ]]; do
     if [[ -f "$dir/CLAUDE.md" ]]; then
       default_dir="$dir"

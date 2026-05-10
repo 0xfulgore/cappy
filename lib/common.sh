@@ -4,6 +4,9 @@
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 # ── ANSI Colors ──────────────────────────────────────────────
+# Palette is sourced by modules; unused-here colors are intentional.
+# shellcheck disable=SC2034
+{
 RST=$'\e[0m'
 DIM=$'\e[2m'
 BOLD=$'\e[1m'
@@ -18,6 +21,7 @@ BRIGHT_GREEN=$'\e[92m'
 BRIGHT_YELLOW=$'\e[93m'
 BRIGHT_CYAN=$'\e[96m'
 BRIGHT_WHITE=$'\e[97m'
+}
 
 # ── Logging ──────────────────────────────────────────────────
 log_info()    { printf "%s[info]%s  %s\n" "$CYAN"   "$RST" "$*"; }
