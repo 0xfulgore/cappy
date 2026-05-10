@@ -104,10 +104,10 @@ setup_server() {
   # Local stdio transport — collect env vars, then register via array exec (no eval)
   local env_args=()
   local env_keys
-  env_keys=$(jq -r '.env_vars | keys[]' "$config_file" 2>/dev/null)
+  env_keys=$(jq -r '.env_vars | keys[]' "$config_file" 2>/dev/null || true)
 
   for key in $env_keys; do
-    local description required help_text
+    local description required help_text value
     description=$(jq -r ".env_vars.\"$key\".description" "$config_file")
     required=$(jq -r ".env_vars.\"$key\".required // false" "$config_file")
     help_text=$(jq -r ".env_vars.\"$key\".help // \"\"" "$config_file")
@@ -115,32 +115,36 @@ setup_server() {
     printf "  %s\n" "$description"
     [[ -n "$help_text" ]] && printf "  Help: %s\n" "$help_text"
 
-    # Check if already set in environment
+    # Check if already set in environment — pass KEY=VALUE (claude mcp add
+    # rejects bare "-e KEY" without a value).
     if [[ -n "${!key:-}" ]]; then
       printf "  (found in environment: %s...)\n" "${!key:0:8}"
-      env_args+=("-e" "$key")
+      env_args+=("-e" "${key}=${!key}")
       continue
     fi
 
     if [[ "$required" == "true" ]]; then
-      printf "  Enter %s: " "$key"
+      printf "  Enter %s (press Enter to skip and configure later): " "$key"
       read -r value
       if [[ -z "$value" ]]; then
-        log_warn "Skipping $name — required variable not provided"
-        return 1
+        log_info "Skipping $name — re-run setup later via:"
+        log_info "  CAPPY_MCP_SERVERS=$server_id bash ~/.cappy/repo/modules/mcp/setup-mcp.sh"
+        return 0
       fi
       export "$key=$value"
-      env_args+=("-e" "$key")
+      env_args+=("-e" "${key}=${value}")
     fi
   done
 
   log_info "Adding $name to Claude Code (user scope)..."
 
   # Build argument array — no eval, values are never interpolated as shell code.
+  # Use the bash-3.2-safe ${arr[@]+...} pattern: empty array expansion under
+  # `set -u` would otherwise abort with "env_args[@]: unbound variable".
   local cmd_args=("claude" "mcp" "add" "--scope" "user" "$server_id")
-  for env_arg in "${env_args[@]}"; do
-    cmd_args+=("$env_arg")
-  done
+  if [[ ${#env_args[@]} -gt 0 ]]; then
+    cmd_args+=("${env_args[@]}")
+  fi
   cmd_args+=("--" "npx" "-y" "@modelcontextprotocol/server-${server_id}")
 
   if "${cmd_args[@]}" 2>&1; then
