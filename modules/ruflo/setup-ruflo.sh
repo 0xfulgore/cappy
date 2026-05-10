@@ -88,21 +88,53 @@ ensure_plugin() {
 }
 
 # ── MCP server ───────────────────────────────────────────────
-mcp_installed() {
+# Ruflo MUST be registered at user scope so it's available in every project.
+# Pre-2.2.2 installs registered at default (local) scope, which limited ruflo
+# to the cappy directory only — users got "Failed to reconnect to ruflo"
+# in any other project. Migration: detect local-scope registration, remove
+# it, re-register at user scope.
+
+mcp_registered_anywhere() {
   claude mcp list 2>/dev/null | grep -qE "(^|[^[:alnum:]_-])${RUFLO_MCP_NAME}([^[:alnum:]_-]|:|$)"
 }
 
+mcp_registered_at_user_scope() {
+  # claude mcp get reports "Scope: User config" when registered at user scope.
+  claude mcp get "$RUFLO_MCP_NAME" 2>/dev/null | grep -q "Scope: User config"
+}
+
+mcp_registered_at_local_scope() {
+  claude mcp get "$RUFLO_MCP_NAME" 2>/dev/null | grep -q "Scope: Local config"
+}
+
 ensure_mcp() {
-  if mcp_installed; then
-    log_info "MCP server '$RUFLO_MCP_NAME' already configured — skipping"
+  # Already at user scope — nothing to do.
+  if mcp_registered_at_user_scope; then
+    log_info "MCP server '$RUFLO_MCP_NAME' already at user scope — skipping"
     return 0
   fi
 
-  log_info "Registering Ruflo MCP server..."
-  if claude mcp add "$RUFLO_MCP_NAME" -- npx -y "ruflo@${RUFLO_MCP_VERSION}" mcp start >/dev/null 2>&1; then
-    log_success "Ruflo MCP server registered"
+  # Migrate from pre-2.2.2 local-scope registration.
+  if mcp_registered_at_local_scope; then
+    log_info "Migrating '$RUFLO_MCP_NAME' from local scope to user scope (so it works in every project)..."
+    if claude mcp remove "$RUFLO_MCP_NAME" >/dev/null 2>&1; then
+      log_success "Removed local-scope registration"
+    else
+      log_warn "Failed to remove local-scope ruflo — continuing, user-scope add may fail"
+    fi
+  fi
+
+  # Some other shape exists (HTTP / project-scope / etc.) — leave it alone.
+  if mcp_registered_anywhere && ! mcp_registered_at_local_scope; then
+    log_info "MCP server '$RUFLO_MCP_NAME' present at non-local scope — leaving as-is"
+    return 0
+  fi
+
+  log_info "Registering Ruflo MCP server at user scope..."
+  if claude mcp add --scope user "$RUFLO_MCP_NAME" -- npx -y "ruflo@${RUFLO_MCP_VERSION}" mcp start >/dev/null 2>&1; then
+    log_success "Ruflo MCP server registered (user scope — works in every project)"
   else
-    log_warn "Failed to register Ruflo MCP server — try manually: claude mcp add $RUFLO_MCP_NAME -- npx -y ruflo@${RUFLO_MCP_VERSION} mcp start"
+    log_warn "Failed to register Ruflo MCP server — try manually: claude mcp add --scope user $RUFLO_MCP_NAME -- npx -y ruflo@${RUFLO_MCP_VERSION} mcp start"
     return 1
   fi
 }
