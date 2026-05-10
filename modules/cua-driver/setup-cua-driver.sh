@@ -37,7 +37,27 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
   exit 0
 fi
 
-UPSTREAM_INSTALLER="${CUA_DRIVER_INSTALLER:-https://raw.githubusercontent.com/trycua/cua/main/libs/cua-driver/scripts/install.sh}"
+# Pinned to a specific commit SHA (not the mutable `main` branch ref) to
+# prevent supply-chain compromise. Bump this in a deliberate commit when
+# upgrading. Last verified: 2026-05-10 against
+# `git ls-remote https://github.com/trycua/cua.git main`.
+_CUA_PINNED_SHA="708b4233b8161e8e404bdbc7dd8b8a5e4e0dd054"
+_CUA_PINNED_URL="https://raw.githubusercontent.com/trycua/cua/${_CUA_PINNED_SHA}/libs/cua-driver/scripts/install.sh"
+
+# CUA_DRIVER_INSTALLER override is allowed ONLY when it points to the
+# official trycua/cua raw content host. Any other value is an injection
+# vector (e.g. a malicious .envrc) and is rejected.
+if [[ -n "${CUA_DRIVER_INSTALLER:-}" ]]; then
+  if [[ "${CUA_DRIVER_INSTALLER}" != https://raw.githubusercontent.com/trycua/cua/* ]]; then
+    log_error "CUA_DRIVER_INSTALLER override rejected: must start with"
+    log_error "  https://raw.githubusercontent.com/trycua/cua/"
+    log_error "Got: ${CUA_DRIVER_INSTALLER}"
+    exit 1
+  fi
+  UPSTREAM_INSTALLER="${CUA_DRIVER_INSTALLER}"
+else
+  UPSTREAM_INSTALLER="${_CUA_PINNED_URL}"
+fi
 
 log_info "cua-driver: running upstream installer from trycua/cua"
 log_info "  source: ${UPSTREAM_INSTALLER}"

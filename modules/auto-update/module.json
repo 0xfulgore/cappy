@@ -6,5 +6,5 @@
   "conflicts": [],
   "files": [],
   "install_type": "files",
-  "post_install": "bash setup.sh"
+  "post_install": true
 }

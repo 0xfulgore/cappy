@@ -71,14 +71,37 @@ restore_backup() {
   local count
   count=$(jq 'length' "$backup_path/backup-manifest.json")
 
+  # Canonicalize CLAUDE_HOME once for prefix-checking below.
+  # realpath resolves symlinks; if the directory doesn't exist yet we fall
+  # back to the unexpanded value (restore would fail later anyway).
+  local claude_home_real
+  claude_home_real=$(realpath "$CLAUDE_HOME" 2>/dev/null || printf '%s' "$CLAUDE_HOME")
+
   for (( i=0; i<count; i++ )); do
-    local file source
+    local file source source_real
     file=$(jq -r ".[$i].file" "$backup_path/backup-manifest.json")
     source=$(jq -r ".[$i].source" "$backup_path/backup-manifest.json")
 
+    # Path-traversal guard: resolve the destination path and verify it is
+    # inside CLAUDE_HOME.  We use realpath on the *parent* dir + the
+    # filename so the check works even when the destination doesn't exist
+    # yet (realpath -m is GNU-only; dirname trick is portable on macOS).
+    local source_dir source_base
+    source_dir=$(dirname "$source")
+    source_base=$(basename "$source")
+    local source_dir_real
+    source_dir_real=$(realpath "$source_dir" 2>/dev/null || printf '%s' "$source_dir")
+    source_real="${source_dir_real}/${source_base}"
+
+    # Reject any destination that doesn't live under CLAUDE_HOME.
+    if [[ "$source_real" != "$claude_home_real"/* ]]; then
+      log_error "Manifest source path escapes CLAUDE_HOME — skipping: $source"
+      continue
+    fi
+
     if [[ -f "$backup_path/$file" ]]; then
-      cp "$backup_path/$file" "$source"
-      log_success "Restored $file → $source"
+      cp "$backup_path/$file" "$source_real"
+      log_success "Restored $file → $source_real"
     fi
   done
 

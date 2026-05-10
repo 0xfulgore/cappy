@@ -29,10 +29,10 @@ RUFLO_PLUGINS=(
   "ruflo-docs"
 )
 RUFLO_MCP_NAME="ruflo"
-# Pin to a known-working stable release. ruflo@latest currently resolves to
-# 3.7.0-alpha.6 which npm registry rejects with ETARGET, so we pin to the
-# v3alpha dist-tag (currently 3.6.30) which is the most recent stable.
-RUFLO_MCP_VERSION="v3alpha"
+# Pinned to a specific version (not the v3alpha dist-tag) to prevent
+# supply-chain compromise. Bump this in a deliberate commit when upgrading.
+# Last verified: 2026-05-10 against `npm view ruflo@v3alpha version`.
+RUFLO_MCP_VERSION="3.7.0-alpha.20"
 
 # ── Prerequisites ────────────────────────────────────────────
 if ! command -v claude &>/dev/null; then

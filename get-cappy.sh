@@ -23,17 +23,48 @@ CAPPY_BRANCH="${CAPPY_BRANCH:-main}"
 if [[ -t 1 ]]; then
   RST=$'\e[0m'; BOLD=$'\e[1m'; DIM=$'\e[2m'
   CYAN=$'\e[36m'; BRIGHT_CYAN=$'\e[96m'
-  GREEN=$'\e[32m'; RED=$'\e[31m'
+  GREEN=$'\e[32m'; RED=$'\e[31m'; YELLOW=$'\e[33m'
   BRIGHT_MAGENTA=$'\e[95m'
 else
   RST=""; BOLD=""; DIM=""; CYAN=""; BRIGHT_CYAN=""
-  GREEN=""; RED=""; BRIGHT_MAGENTA=""
+  GREEN=""; RED=""; YELLOW=""; BRIGHT_MAGENTA=""
 fi
 
 err()  { printf '%s[err]%s  %s\n' "$RED" "$RST" "$*" >&2; }
 ok()   { printf '%s[ ok]%s  %s\n' "$GREEN" "$RST" "$*"; }
 info() { printf '%s[info]%s %s\n' "$CYAN" "$RST" "$*"; }
+warn() { printf '%s[warn]%s %s\n' "$YELLOW" "$RST" "$*" >&2; }
 step() { printf '\n%s━━ %s%s\n' "$BRIGHT_CYAN" "$*" "$RST"; }
+
+# ── CAPPY_BRANCH validation ───────────────────────────────────
+# Permit conventional git branch names: letters, digits, . _ / -
+# Reject shell-metachar payloads (semicolons, spaces, $, backticks, etc.)
+if [[ ! "$CAPPY_BRANCH" =~ ^[a-zA-Z0-9._/-]+$ ]]; then
+  err "CAPPY_BRANCH contains invalid characters: '$CAPPY_BRANCH'"
+  err "Allowed characters: letters, digits, . _ / -"
+  exit 1
+fi
+
+# Warn and require explicit interactive confirmation for non-main branches.
+if [[ "$CAPPY_BRANCH" != "main" ]]; then
+  warn "CAPPY_BRANCH is set to '$CAPPY_BRANCH' (not main)."
+  warn "You will install code from a non-default branch."
+  if [[ -t 0 ]]; then
+    printf '         Continue? (y/N) ' >&2
+    read -r _branch_confirm
+    case "$_branch_confirm" in
+      y|Y|yes|YES) ;;
+      *)
+        err "Aborted by user."
+        exit 1
+        ;;
+    esac
+  else
+    err "Non-interactive mode: cannot confirm non-main branch."
+    err "Set CAPPY_BRANCH=main or run interactively."
+    exit 1
+  fi
+fi
 
 printf '\n   %s%scappy%s %s— bootstrapping...%s\n' "$BRIGHT_MAGENTA" "$BOLD" "$RST" "$DIM" "$RST"
 

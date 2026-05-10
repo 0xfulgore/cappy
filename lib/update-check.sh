@@ -5,6 +5,32 @@
 # Designed to run async from the statusline. Fails silent on any
 # error so a flaky network never breaks shell rendering.
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#
+# ── Supply-chain trust notice ────────────────────────────────
+# The auto-update mechanism detects new releases via git ls-remote.
+# Applying an update uses `git pull --ff-only` from 0xfulgore/cappy
+# (triggered by `cappy update`). This script only DETECTS availability;
+# it does NOT apply changes automatically.
+#
+# IMPORTANT: there is currently NO signature verification on tags or
+# commits. The update check trusts whatever the remote reports.
+# An attacker with write access to the upstream repo could serve a
+# malicious release and this script would report it as valid.
+#
+# Users who want stronger integrity guarantees should:
+#   1. Pin to a known-good tag:
+#        cd ~/.cappy/repo && git checkout vX.Y.Z
+#   2. Review changes before applying:
+#        git fetch origin && git log HEAD..origin/main --oneline
+#        git diff HEAD origin/main
+#   3. Verify the SHA-256 checksum published in each GitHub release's
+#      notes before running `cappy update`.
+#   4. Await GPG-signed tag support (tracked: audit-06 CRIT-4, planned
+#      for a future release) — then verify with `git verify-tag vX.Y.Z`.
+#
+# This is a deliberate documented limitation (checksum-only path,
+# introduced in v2.3.0), not an oversight.
+# ────────────────────────────────────────────────────────────
 
 CAPPY_HOME="${CAPPY_HOME:-$HOME/.cappy}"
 CAPPY_REPO="${CAPPY_REPO:-$CAPPY_HOME/repo}"
@@ -26,6 +52,10 @@ cd "$CAPPY_REPO" 2>/dev/null || exit 0
 
 remote_url=$(git config --get remote.origin.url 2>/dev/null || true)
 [[ -z "$remote_url" ]] && exit 0
+
+# Strip embedded credentials (https://user:token@host → https://host)
+# so they are never persisted to the world-readable status file.
+remote_url=$(printf '%s' "$remote_url" | sed 's|://[^@]*@|://|')
 
 branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)
 [[ -z "$branch" ]] && exit 0
@@ -91,3 +121,4 @@ cat > "$tmp" <<EOF
 }
 EOF
 mv "$tmp" "$STATUS_FILE" 2>/dev/null || rm -f "$tmp"
+chmod 600 "$STATUS_FILE" 2>/dev/null || true

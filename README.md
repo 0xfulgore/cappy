@@ -321,6 +321,27 @@ How users see the new release:
 - The statusline picks it up next render and shows `↑ cappy v1.2.3`.
 - `cappy update` pulls and reinstalls.
 
+## Verify Integrity
+
+Each cappy release publishes a SHA-256 checksum of its source tarball in the GitHub release notes.
+
+**Check the published checksum:**
+```bash
+gh release view v2.3.0 --json body | jq -r .body | grep -A2 "SHA-256"
+```
+
+**Manual verification:**
+1. Download the release tarball from the GitHub release page (or via the archive URL):
+   `https://github.com/0xfulgore/cappy/archive/refs/tags/vX.Y.Z.tar.gz`
+2. Compute the checksum locally:
+   ```bash
+   shasum -a 256 cappy-X.Y.Z.tar.gz        # macOS
+   sha256sum cappy-X.Y.Z.tar.gz            # Linux
+   ```
+3. Compare against the `SHA-256` value in the release notes. They must match exactly.
+
+**Honest limitation:** This is checksum-only verification. It confirms the tarball was not corrupted or substituted in transit, but it is not a full chain-of-trust guarantee. An attacker who compromises the GitHub repository can publish both a malicious tarball and a matching checksum. Stronger integrity — GPG-signed tags verifiable with `git verify-tag` — is tracked as a future improvement (audit-06 CRIT-4) and not yet implemented in this release.
+
 ## How It Works
 
 - **Non-destructive**: Always backs up existing configs to `~/.claude/backups/cappy-<timestamp>/` before modifying

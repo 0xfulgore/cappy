@@ -18,7 +18,11 @@ else
   log_error()   { printf "[ err]  %s\n" "$*" >&2; }
 fi
 
-MEMPALACE_PKG="mempalace"
+# Pinned to a specific version to prevent supply-chain compromise via
+# an unpinned PyPI install. Bump this in a deliberate commit when upgrading.
+# Last verified: 2026-05-10 against https://pypi.org/pypi/mempalace/json.
+MEMPALACE_PKG="mempalace==3.3.4"
+MEMPALACE_PKG_NAME="mempalace"
 MEMPALACE_MCP_NAME="mempalace"
 MEMPALACE_MCP_BIN="mempalace-mcp"
 
@@ -122,14 +126,14 @@ run_pipx() {
 
 # ── Package install (pipx preferred, pip --user fallback) ────
 package_installed() {
-  # pipx installation check
+  # pipx installation check (use bare package name, not the versioned specifier)
   if command -v pipx &>/dev/null || python3 -m pipx --version >/dev/null 2>&1; then
-    if run_pipx list --short 2>/dev/null | grep -qE "^${MEMPALACE_PKG}([[:space:]]|$)"; then
+    if run_pipx list --short 2>/dev/null | grep -qE "^${MEMPALACE_PKG_NAME}([[:space:]]|$)"; then
       return 0
     fi
   fi
   # pip / pip --user check (covers either install path)
-  if python3 -m pip show "$MEMPALACE_PKG" >/dev/null 2>&1; then
+  if python3 -m pip show "$MEMPALACE_PKG_NAME" >/dev/null 2>&1; then
     return 0
   fi
   return 1

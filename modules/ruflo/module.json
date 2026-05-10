@@ -13,5 +13,5 @@
   ],
   "install_type": "files",
   "settings_merge": {},
-  "post_install": "bash setup-ruflo.sh"
+  "post_install": true
 }

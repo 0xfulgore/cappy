@@ -21,6 +21,17 @@ set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
+# ── Tempfile cleanup ─────────────────────────────────────────
+# Registered early so any exit (error or normal) cleans up.
+# Additional paths are added to _TMPFILES as they are created.
+_TMPFILES=()
+_cleanup_tmpfiles() {
+  for _f in "${_TMPFILES[@]:-}"; do
+    rm -f "$_f"
+  done
+}
+trap '_cleanup_tmpfiles' EXIT
+
 if [[ ! -f forge.json ]]; then
   printf '[err]  not in cappy repo (no forge.json here)\n' >&2
   exit 1
@@ -171,7 +182,10 @@ else
 fi
 
 if (( DRY_RUN )); then
-  printf '\n%s[dry-run]%s would: bump forge.json, commit, tag %s, push%s\n' "$YELLOW" "$RST" "$tag" "$([[ $PUSH -eq 1 ]] && echo "" || echo " (skipped --no-push)")"
+  _push_note="$([[ $PUSH -eq 1 ]] && echo "" || echo " (skipped --no-push)")"
+  _gh_note="$([[ $GH -eq 1 ]] && echo ", gh release create + append SHA-256 checksum" || echo ", print SHA-256 checksum for manual paste")"
+  printf '\n%s[dry-run]%s would: bump forge.json, commit, tag %s, push%s%s\n' \
+    "$YELLOW" "$RST" "$tag" "$_push_note" "$_gh_note"
   exit 0
 fi
 
@@ -186,6 +200,7 @@ esac
 # ── Bump forge.json ──────────────────────────────────────────
 step "Bumping forge.json: $current → $new"
 tmp=$(mktemp)
+_TMPFILES+=("$tmp")
 jq --arg v "$new" '.version = $v' forge.json > "$tmp"
 mv "$tmp" forge.json
 ok "forge.json updated"
@@ -223,6 +238,7 @@ else
 fi
 
 # ── GitHub release ───────────────────────────────────────────
+# Create first so the subsequent checksum step can append to the notes.
 if (( GH )); then
   if command -v gh >/dev/null 2>&1; then
     step "Creating GitHub release"
@@ -234,6 +250,53 @@ if (( GH )); then
     fi
   else
     warn "gh CLI not found — skipping GitHub release"
+  fi
+fi
+
+# ── SHA-256 checksum ─────────────────────────────────────────
+# Compute a SHA-256 of the release tarball so users can verify integrity.
+# If --gh was passed and the release exists, the checksum is appended to
+# the release notes. Otherwise it is printed for the maintainer to paste
+# manually into the GitHub release page.
+step "Computing SHA-256 checksum"
+_tarball="/tmp/cappy-${new}.tar.gz"
+_TMPFILES+=("$_tarball")
+git archive --format=tar.gz --prefix="cappy-${new}/" -o "$_tarball" "$tag"
+if command -v shasum >/dev/null 2>&1; then
+  _sha256=$(shasum -a 256 "$_tarball" | awk '{print $1}')
+elif command -v sha256sum >/dev/null 2>&1; then
+  _sha256=$(sha256sum "$_tarball" | awk '{print $1}')
+else
+  warn "neither shasum nor sha256sum found — skipping checksum"
+  _sha256=""
+fi
+
+if [[ -n "$_sha256" ]]; then
+  ok "Release tarball SHA-256: $_sha256"
+
+  if (( GH )) && command -v gh >/dev/null 2>&1 && (( PUSH )) \
+      && gh release view "$tag" >/dev/null 2>&1; then
+    # Append the verify block to whatever notes gh auto-generated above
+    _notes_tmp=$(mktemp)
+    _TMPFILES+=("$_notes_tmp")
+    _existing_notes=$(gh release view "$tag" --json body -q .body 2>/dev/null || true)
+    {
+      if [[ -n "$_existing_notes" ]]; then
+        printf '%s\n\n' "$_existing_notes"
+      fi
+      printf '## Verify integrity\n\n'
+      printf '```sh\n'
+      printf 'shasum -a 256 cappy-%s.tar.gz\n' "$new"
+      printf '# expected: %s\n' "$_sha256"
+      printf '```\n\n'
+      printf 'Or download from https://github.com/0xfulgore/cappy/archive/refs/tags/%s.tar.gz\n' "$tag"
+      printf 'and verify against the SHA-256 above.\n'
+    } > "$_notes_tmp"
+    gh release edit "$tag" --notes-file "$_notes_tmp"
+    ok "checksum appended to GitHub release notes"
+  else
+    info "Add this checksum manually to the GitHub release notes:"
+    info "  SHA-256 (cappy-${new}.tar.gz) = $_sha256"
   fi
 fi
 

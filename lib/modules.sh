@@ -117,11 +117,25 @@ install_module() {
   fi
 
   # Run post_install if present
-  local post_install
-  post_install=$(jq -r '.post_install // empty' "$module_json" 2>/dev/null)
-  if [[ -n "$post_install" ]] && [[ "$post_install" != "null" ]]; then
-    log_info "Running post-install for $module_name..."
-    bash -c "cd '$module_dir' && $post_install"
+  # Security: post_install MUST be a boolean true in module.json.
+  # The implementation lives in <module_dir>/post_install.sh — never a free-form string.
+  # A stale string-form value (legacy or supply-chain-compromised manifest) is
+  # logged as a warning and SKIPPED — it is never executed.
+  local post_install_raw
+  post_install_raw=$(jq -r '.post_install // empty' "$module_json" 2>/dev/null)
+
+  if [[ -n "$post_install_raw" ]] && [[ "$post_install_raw" != "null" ]]; then
+    if [[ "$post_install_raw" == "true" ]]; then
+      local post_install_script="${module_dir}/post_install.sh"
+      if [[ -f "$post_install_script" ]]; then
+        log_info "Running post-install for $module_name..."
+        bash "$post_install_script"
+      else
+        log_warn "post_install is true for $module_name but post_install.sh not found — skipping"
+      fi
+    else
+      log_warn "SECURITY: Module '$module_name' has a legacy string post_install value — skipping execution. Migrate to post_install.sh."
+    fi
   fi
 }
 
