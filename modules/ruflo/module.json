@@ -12,6 +12,34 @@
     }
   ],
   "install_type": "files",
-  "settings_merge": {},
+  "settings_merge": {
+    "permissions": {
+      "allow": [
+        "mcp__ruflo__autopilot_enable",
+        "mcp__ruflo__autopilot_disable",
+        "mcp__ruflo__autopilot_status",
+        "mcp__ruflo__autopilot_progress",
+        "mcp__ruflo__autopilot_config",
+        "mcp__ruflo__autopilot_predict",
+        "mcp__ruflo__autopilot_log",
+        "mcp__ruflo__autopilot_history",
+        "mcp__ruflo__autopilot_learn",
+        "mcp__ruflo__autopilot_reset",
+        "mcp__ruflo__swarm_init",
+        "mcp__ruflo__swarm_status",
+        "mcp__ruflo__swarm_health",
+        "mcp__ruflo__swarm_shutdown",
+        "mcp__ruflo__task_create",
+        "mcp__ruflo__task_list",
+        "mcp__ruflo__task_update",
+        "mcp__ruflo__task_complete",
+        "mcp__ruflo__task_status",
+        "mcp__ruflo__task_summary",
+        "mcp__ruflo__system_status",
+        "mcp__ruflo__system_health",
+        "mcp__ruflo__mcp_status"
+      ]
+    }
+  },
   "post_install": true
 }
