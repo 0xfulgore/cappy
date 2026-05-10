@@ -115,12 +115,15 @@ ensure_mcp() {
   fi
 
   # Migrate from pre-2.2.2 local-scope registration.
+  # Capture stderr so failures show the actual claude error, not just "failed".
   if mcp_registered_at_local_scope; then
     log_info "Migrating '$RUFLO_MCP_NAME' from local scope to user scope (so it works in every project)..."
-    if claude mcp remove "$RUFLO_MCP_NAME" >/dev/null 2>&1; then
+    local _err
+    if _err=$(claude mcp remove "$RUFLO_MCP_NAME" 2>&1); then
       log_success "Removed local-scope registration"
     else
-      log_warn "Failed to remove local-scope ruflo — continuing, user-scope add may fail"
+      log_warn "Failed to remove local-scope ruflo: $_err"
+      log_warn "Continuing — user-scope add may fail. If it does, run: claude mcp remove $RUFLO_MCP_NAME"
     fi
   fi
 
@@ -131,11 +134,20 @@ ensure_mcp() {
   fi
 
   log_info "Registering Ruflo MCP server at user scope..."
-  if claude mcp add --scope user "$RUFLO_MCP_NAME" -- npx -y "ruflo@${RUFLO_MCP_VERSION}" mcp start >/dev/null 2>&1; then
+  local _err
+  if _err=$(claude mcp add --scope user "$RUFLO_MCP_NAME" -- npx -y "ruflo@${RUFLO_MCP_VERSION}" mcp start 2>&1); then
     log_success "Ruflo MCP server registered (user scope — works in every project)"
   else
-    log_warn "Failed to register Ruflo MCP server — try manually: claude mcp add --scope user $RUFLO_MCP_NAME -- npx -y ruflo@${RUFLO_MCP_VERSION} mcp start"
+    log_warn "Failed to register Ruflo MCP server: $_err"
+    log_warn "Try manually: claude mcp add --scope user $RUFLO_MCP_NAME -- npx -y ruflo@${RUFLO_MCP_VERSION} mcp start"
     return 1
+  fi
+
+  # Post-action verification: report what claude actually has registered.
+  if mcp_registered_at_user_scope; then
+    log_success "Verified: ruflo is at user scope (available in every project)"
+  else
+    log_warn "Verification failed — claude mcp get $RUFLO_MCP_NAME does not show user scope. Run it manually to inspect."
   fi
 }
 

@@ -103,12 +103,15 @@ if command -v claude >/dev/null 2>&1; then
     log_info "cua-driver already registered as an MCP server at user scope — skipping"
   else
     # Migrate from pre-user-scope local-scope registration.
+    # Capture stderr so failures show the actual claude error, not just "failed".
+    # (No `local` here — this block is at script top level, not inside a function.)
     if _cua_mcp_registered_at_local_scope; then
       log_info "Migrating '$CUA_DRIVER_MCP_NAME' from local scope to user scope (so it works in every project)..."
-      if claude mcp remove "$CUA_DRIVER_MCP_NAME" >/dev/null 2>&1; then
+      if _err=$(claude mcp remove "$CUA_DRIVER_MCP_NAME" 2>&1); then
         log_success "Removed local-scope registration"
       else
-        log_warn "Failed to remove local-scope cua-driver — continuing, user-scope add may fail"
+        log_warn "Failed to remove local-scope cua-driver: $_err"
+        log_warn "Continuing — user-scope add may fail. If it does, run: claude mcp remove $CUA_DRIVER_MCP_NAME"
       fi
     fi
 
@@ -117,11 +120,11 @@ if command -v claude >/dev/null 2>&1; then
       log_info "cua-driver present at non-local scope — leaving as-is"
     else
       log_info "Registering cua-driver as an MCP server at user scope (claude mcp add)"
-      if claude mcp add --scope user --transport stdio "$CUA_DRIVER_MCP_NAME" -- cua-driver mcp 2>/dev/null; then
+      if _err=$(claude mcp add --scope user --transport stdio "$CUA_DRIVER_MCP_NAME" -- cua-driver mcp 2>&1); then
         log_success "cua-driver registered with Claude Code (user scope — works in every project)"
       else
-        log_warn "claude mcp add failed — register manually:"
-        log_warn "  claude mcp add --scope user --transport stdio $CUA_DRIVER_MCP_NAME -- cua-driver mcp"
+        log_warn "claude mcp add failed: $_err"
+        log_warn "Register manually: claude mcp add --scope user --transport stdio $CUA_DRIVER_MCP_NAME -- cua-driver mcp"
       fi
     fi
   fi

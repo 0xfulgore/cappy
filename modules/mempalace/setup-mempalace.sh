@@ -233,12 +233,15 @@ ensure_mcp() {
   fi
 
   # Migrate from pre-user-scope local-scope registration.
+  # Capture stderr so failures show the actual claude error, not just "failed".
   if mcp_registered_at_local_scope; then
     log_info "Migrating '$MEMPALACE_MCP_NAME' from local scope to user scope (so it works in every project)..."
-    if claude mcp remove "$MEMPALACE_MCP_NAME" >/dev/null 2>&1; then
+    local _err
+    if _err=$(claude mcp remove "$MEMPALACE_MCP_NAME" 2>&1); then
       log_success "Removed local-scope registration"
     else
-      log_warn "Failed to remove local-scope mempalace — continuing, user-scope add may fail"
+      log_warn "Failed to remove local-scope mempalace: $_err"
+      log_warn "Continuing — user-scope add may fail. If it does, run: claude mcp remove $MEMPALACE_MCP_NAME"
     fi
   fi
 
@@ -251,11 +254,20 @@ ensure_mcp() {
   ensure_binary_on_path || return 1
 
   log_info "Registering MemPalace MCP server (user scope)..."
-  if claude mcp add -s user "$MEMPALACE_MCP_NAME" -- "$MEMPALACE_MCP_BIN" >/dev/null 2>&1; then
+  local _err
+  if _err=$(claude mcp add -s user "$MEMPALACE_MCP_NAME" -- "$MEMPALACE_MCP_BIN" 2>&1); then
     log_success "MemPalace MCP server registered (available in every project)"
   else
-    log_warn "Failed to register MCP server — try manually: claude mcp add -s user $MEMPALACE_MCP_NAME -- $MEMPALACE_MCP_BIN"
+    log_warn "Failed to register MCP server: $_err"
+    log_warn "Try manually: claude mcp add -s user $MEMPALACE_MCP_NAME -- $MEMPALACE_MCP_BIN"
     return 1
+  fi
+
+  # Post-action verification.
+  if mcp_registered_at_user_scope; then
+    log_success "Verified: mempalace is at user scope"
+  else
+    log_warn "Verification failed — claude mcp get $MEMPALACE_MCP_NAME does not show user scope. Run it manually to inspect."
   fi
 }
 
