@@ -1,302 +1,357 @@
-# Cappy
+<div align="center">
 
-**The ultimate Claude Code power-user toolkit.**
-
-Install once. Then just use `claude` normally in any project. The SDLC pipeline kicks in automatically.
-
-```bash
-# Install (one-liner)
-curl -fsSL https://raw.githubusercontent.com/0xfulgore/cappy/main/get-cappy.sh | bash
-
-# That's it. Now in ANY project:
-cd ~/your-project
-claude "Add a user dashboard with analytics"
-# Claude automatically: discovers → specs → designs → builds → reviews → validates
+```
+   ██████╗ █████╗ ██████╗ ██████╗ ██╗   ██╗
+  ██╔════╝██╔══██╗██╔══██╗██╔══██╗╚██╗ ██╔╝
+  ██║     ███████║██████╔╝██████╔╝ ╚████╔╝
+  ██║     ██╔══██║██╔═══╝ ██╔═══╝   ╚██╔╝
+  ╚██████╗██║  ██║██║     ██║        ██║
+   ╚═════╝╚═╝  ╚═╝╚═╝     ╚═╝        ╚═╝
 ```
 
-The bootstrap clones the repo to `~/.cappy/repo/`, hands off to `cappy boot`, and from then on you manage everything with `cappy update`, `cappy status`, etc. Prefer the manual route? `git clone https://github.com/0xfulgore/cappy.git && cd cappy && ./install.sh` still works.
+### **Stop letting Claude ship vibes-as-code.**
 
-The installer asks where your projects live (e.g., `~/Development`), installs a CLAUDE.md there, and Claude Code picks it up in every subdirectory. No scaffolding, no CLI tools, no team setup needed.
+[![CI](https://github.com/0xfulgore/cappy/actions/workflows/ci.yml/badge.svg)](https://github.com/0xfulgore/cappy/actions/workflows/ci.yml)
+[![Version](https://img.shields.io/github/v/tag/0xfulgore/cappy?label=version&color=blue)](https://github.com/0xfulgore/cappy/releases)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Made for Claude Code](https://img.shields.io/badge/made%20for-Claude%20Code-7c3aed)](https://claude.com/claude-code)
+[![Stars](https://img.shields.io/github/stars/0xfulgore/cappy?style=social)](https://github.com/0xfulgore/cappy/stargazers)
 
-**To skip the pipeline**: say "just do it", "quick fix", or "skip the process".
+One install. Then Claude **plans before it codes**, **gathers evidence before it explains**, **verifies before it claims done**, and **blocks instead of guesses** when it gets stuck. Plus 14 agent swarm templates, an animated statusline, surgical hooks, and curated MCP servers — all wired up automatically.
 
-## What You Get
+```bash
+curl -fsSL https://raw.githubusercontent.com/0xfulgore/cappy/main/get-cappy.sh | bash
+```
 
-17 default modules + 3 opt-in modules. Install all or pick a subset.
+![cappy demo](assets/demo.gif)
 
-| Module | Description |
-|--------|-------------|
-| **core** | SDLC pipeline + 18 mechanical overrides (15 numbered rules + Linear ticket workflow, Ruflo swarm preference, mandatory swarm-split threshold) — the engine that drives everything |
-| **auto-update** | `cappy` CLI shim + 24h-cadence update notifier in the statusline (see [The `cappy` command](#the-cappy-command)) |
-| **statusline** | Animated status bar: model, context %, git, task progress, cost, ETA |
-| **settings** | settings.json presets — power-user, cautious, team-lead |
-| **hooks** | Post-edit typecheck, auto-lint, pre-commit gate, file guard |
-| **hedge-detector** | Stop hook that rejects hedging language ("probably", "I think", "seems", "could be") in assistant output |
-| **git-safety** | Block force-push to main, conventional commit format hints |
-| **mcp** | MCP servers: GitHub, Linear (OAuth), PostgreSQL, Playwright |
-| **teams** | 14 agent swarm templates (see below) — installs `~/.cappy/scaffold-team.sh` |
-| **skills** | Task progress dashboard, skill discovery |
-| **templates** | Project CLAUDE.md generators: React, Rust, Python, Expo, generic — installs `~/.cappy/scaffold-project.sh` |
-| **performance** | Perf directives: bundle size, N+1 queries, lazy loading, pagination |
-| **accessibility** | WCAG 2.2 AA: keyboard nav, screen readers, contrast, touch targets |
-| **devops** | CI/CD awareness, env var safety, Docker best practices, migrations |
-| **api-design** | REST conventions, input validation, error handling, versioning |
-| **ruflo** | Ruflo agent platform: marketplace + 8 plugins + MCP server. Adds `/autopilot enable` (autonomous task loops), `/swarm init` (multi-agent), `/watch` (live event stream). Claude offers autopilot inline when a task hits the swarm threshold (per core directive #25). Install asks for autopilot prefs; reference: `modules/ruflo/QUICKSTART.md`. |
-| **mempalace** | MemPalace local-first AI memory: pip package + MCP server (user scope). Auto-installs pipx if missing. Run `mempalace init/mine` per project. |
+</div>
 
-### Opt-in modules
-These are listed in the picker but NOT included in "install all" — pick by number, or pass via `--modules`. All fetch from upstream at install time.
+---
 
-| Module | Description |
-|--------|-------------|
-| **huashu-design** | HTML hi-fi prototyping skill from [alchaincyf/huashu-design](https://github.com/alchaincyf/huashu-design). Shallow-clones into `~/.claude/skills/huashu-design`. |
-| **frontend-design** | Anthropic's official production frontend skill from [anthropics/claude-code](https://github.com/anthropics/claude-code/tree/main/plugins/frontend-design). Sparse-checkout into `~/.claude/skills/frontend-design`. Coexists with huashu-design (different skill name and trigger profile). |
-| **cua-driver** | macOS app driver from [trycua/cua](https://github.com/trycua/cua) — Swift binary + MCP server + bundled skill pack. Delegates to upstream's official installer; auto-registers as an MCP server in Claude Code. macOS-only (skips on other OSes). Needs Accessibility + Screen Recording permissions on first use. |
+## The 30-Second Pitch
+
+You've felt it. Claude confidently says *"This is probably caused by..."* — without reading a single log. It writes 400 lines, declares "all tests pass" without running them, and silently invents `process.env.STRIPE_KEY = "sk_test_xxx"` because it didn't want to bother you for the real one.
+
+Cappy fixes that. Mechanically.
+
+It installs a layered set of guardrails into your CLAUDE.md, hooks, and settings — and a 6-phase SDLC pipeline that turns *"add a user dashboard"* into a real product workflow with approval gates, parallel build agents, and a green Definition-of-Done check before anything is called "done".
+
+Skip any of it any time with `"just do it"`, `"quick fix"`, or `"skip the process"`.
+
+## Before vs. After Cappy
+
+<table>
+<tr>
+<th>Vanilla Claude Code</th>
+<th>Cappy Claude Code</th>
+</tr>
+<tr>
+<td>
+
+```
+You: why does the API return 500?
+
+Claude: This is probably caused by
+a misconfigured CORS header. Let me
+fix that for you...
+
+[edits 4 files, breaks auth]
+```
+
+</td>
+<td>
+
+```
+You: why does the API return 500?
+
+Claude: [reads logs first]
+        [greps for the error]
+        [opens the handler]
+
+→ Cited: api/orders.ts:84
+→ NULL value crashes JSON.stringify
+  on the audit_log path.
+```
+
+</td>
+</tr>
+<tr>
+<td>
+
+```
+Claude: All done! Tests pass. ✅
+```
+
+</td>
+<td>
+
+```
+Claude: BLOCKED.
+
+  ✗ tsc --noEmit  (3 errors)
+  ✓ eslint --quiet
+  ✗ vitest run    (2 failing)
+
+Won't say "done" until gates pass.
+```
+
+</td>
+</tr>
+</table>
+
+## What Cappy Stops Claude From Doing
+
+> The whole toolkit can be summed up by what it forbids.
+
+- ✗ Pattern-matching causes from training → **must cite a tool call in the same turn**
+- ✗ Hedging with *"probably"*, *"I think"*, *"seems"* → **rejected by a Stop hook**
+- ✗ Claiming "done" before tests run → **blocked by a 5-gate Definition of Done**
+- ✗ Burning context on 50-file refactors → **mandatory swarm split above the threshold**
+- ✗ Editing files from stale memory after compaction → **forced re-reads**
+- ✗ Inventing placeholder credentials in autopilot → **emits `BLOCKED:` instead**
+- ✗ Force-pushing to main → **git-safety hook stops it**
+- ✗ Writing to `.env` or credentials files → **file-guard hook stops it**
 
 ## Quick Start
 
-### One-liner (interactive)
 ```bash
+# install once
 curl -fsSL https://raw.githubusercontent.com/0xfulgore/cappy/main/get-cappy.sh | bash
+
+# then in any project, just use Claude normally
+cd ~/your-project
+claude "add a user dashboard with analytics"
+# → discovers → specs → designs → 🔒 approval → builds → reviews → validates
 ```
 
-### Pin a branch
-```bash
-curl -fsSL https://raw.githubusercontent.com/0xfulgore/cappy/main/get-cappy.sh | CAPPY_BRANCH=develop bash
-```
+The bootstrap clones cappy to `~/.cappy/repo/` and hands off to `cappy boot`. The installer asks where your projects live (e.g. `~/Development`), drops a CLAUDE.md there, and Claude Code picks it up in every subdirectory below.
 
-### Manual clone (still supported)
-```bash
-git clone https://github.com/0xfulgore/cappy.git
-cd cappy
-./install.sh
-```
+Manual: `git clone https://github.com/0xfulgore/cappy.git && cd cappy && ./install.sh`
+Branch pin: `CAPPY_BRANCH=develop bash`
+CI mode: `cappy install --non-interactive --preset power-user`
+Subset: `--modules core,statusline,hooks`
 
-This clones a self-contained copy to `~/.cappy/repo` and installs from there. Your `cd`-ed clone can be deleted afterwards — cappy survives.
+## The 6-Phase SDLC Pipeline
 
-### Dev mode (cappy maintainers)
-```bash
-cd /path/to/your/cappy/clone
-./install.sh --link
-```
-
-Symlinks `~/.cappy/repo` → your clone instead of cloning fresh. Edits to your clone are live in cappy. **Footgun**: if you delete or move the clone, cappy breaks. Re-run without `--link` to switch back to a self-contained install.
-
-### Install specific modules
-```bash
-cappy install --modules core,auto-update,statusline,hooks
-# or, pre-install:  ./install.sh --modules ...
-```
-
-### Non-interactive (CI/automation)
-```bash
-cappy install --non-interactive --preset power-user
-# or:  ./install.sh --non-interactive --preset power-user
-```
-
-## Modules
-
-### Core: CLAUDE.md Mechanical Overrides
-
-Composable rules that make Claude Code produce production-grade code. Each rule is a separately-toggleable section in your CLAUDE.md.
-
-**Pre-Work**
-1. **Evidence Before Explanation** — First action must be a tool call gathering evidence; no causal claims without citations
-2. **Step 0 Cleanup** — Remove dead code before refactoring
-3. **Phased Execution** — Max 5 files per phase, verify between phases
-
-**Code Quality**
-4. **Senior Dev Override** — Fix architectural flaws, don't just follow orders
-5. **Fix As You Go** — Broken thing found mid-task gets fixed immediately, no defer lists
-6. **Forced Verification** — Must run type-check + lint before declaring done
-6a. **Linear Ticket Workflow** — Auto-claim, set in-progress, comment on blockers, transition to user's chosen terminal status; attach PR/branch URLs
-
-**Context Management**
-7. **Sub-Agent Swarming** — Parallel agents for tasks >5 files
-7a. **Prefer Ruflo Swarms For Team Work** — Route team/swarm work through Ruflo if its tools/skills are present; fall back to native `TeamCreate` only when not
-7b. **Mandatory Swarm Split For Large Bodies of Work** — Force a swarm when work exceeds any of: >10 files, >300 LOC, >8 design tasks, >2h, or >2 subsystems
-8. **Context Decay Awareness** — Re-read files after 10+ messages
-9. **File Read Budget** — 2000 line cap, chunk large files
-10. **Tool Result Blindness** — Detect truncated results, narrow scope
-
-**Edit Safety**
-11. **Edit Integrity** — Read before/after every edit, verify changes applied
-12. **No Semantic Search** — Grep isn't AST; search all reference types separately
-
-**Definition of Done**
-13. **Verify Before Claiming Done** — Read actual output yourself; never trust "agent said done"
-14. **Definition of Done** — Type-check, lint, test, build, coverage gates must ALL pass
-
-**Default Workflow**
-15. **SDLC by Default** — All non-trivial tasks follow the 6-phase pipeline (discovery → spec → design → build → review → validate) with user approval gates. Skip with "just do it"
-
-The `performance`, `accessibility`, `devops`, and `api-design` modules add four more rule clusters (16–19) on top of core when installed.
-
-### Statusline
-
-Animated terminal status bar with:
-- Model name and context window usage (color-coded)
-- Git branch, dirty state, ahead/behind
-- Lines changed, session cost, duration
-- Task progress bar with animated spinner and ETA
-- Team-aware task tracking
-
-### Hooks
-
-| Hook | Trigger | What it does |
-|------|---------|-------------|
-| `post-edit-typecheck.sh` | After .ts/.tsx edits | Runs `tsc --noEmit` |
-| `post-edit-lint.sh` | After file edits | Auto-runs ESLint/Biome/Ruff/Clippy |
-| `pre-commit-check.sh` | Before `git commit` | Type-check + lint + tests gate |
-| `file-guard.sh` | Before file writes | Blocks edits to .env, credentials, keys |
-| `hedge-rejector.mjs` | Stop event | Rejects hedging language ("probably", "I think", "seems") in assistant output (separate `hedge-detector` module) |
-
-### MCP Servers
-
-The `mcp` module configures MCP servers for Claude Code on a per-server-opt-in basis. Choose any subset during install:
-
-| Server | What it provides | Auth |
-|--------|------------------|------|
-| **GitHub** | PR/issue management, code search | Token from `gh auth` or env |
-| **Linear** | Ticket claim, transition, comment, link PRs (used by rule 6a) | OAuth via browser |
-| **PostgreSQL** | Database queries and exploration | Connection string |
-| **Playwright** | Browser automation and testing | None |
-
-### Team Templates
-
-#### Product SDLC (flagship template)
-
-A complete 8-agent software development lifecycle with defined handoffs and approval gates:
+Type a feature request. Claude refuses to start coding. Instead it produces a Research Brief with open questions, then a PRD with Given/When/Then acceptance criteria, then a numbered task design — each with an explicit user approval gate. Then it builds, reviews, and validates against the gates.
 
 ```
-User Idea → Scout (discovery) → Spec (PRD) → 🔒 USER APPROVAL
-→ Architect (design) → 🔒 USER APPROVAL → Engineers (parallel build)
-→ Reviewer (code quality + security) → QA (final validation) → Ship
+User idea
+   ↓
+[ Scout ]      Discovery — codebase scan + research brief
+   ↓
+[ Spec ]       PRD with Given/When/Then       🔒 USER APPROVAL
+   ↓
+[ Architect ]  Schema, API contracts, tasks   🔒 USER APPROVAL
+   ↓
+[ Engineers ]  Backend + Frontend in parallel
+   ↓
+[ Reviewer ]   Code quality + OWASP audit
+   ↓
+[ QA ]         All Definition-of-Done gates run
+   ↓
+   Ship.
 ```
 
-| Agent | Role | Phase |
-|-------|------|-------|
-| **Lead** | Orchestrates pipeline, manages approval gates | All |
-| **Scout** | Explores codebase, researches competitors, surfaces questions | 1: Discovery |
-| **Spec** | Writes PRD with user stories + acceptance criteria | 2: Specification |
-| **Architect** | Technical design, schema, API contracts, task breakdown | 3: Design |
-| **Backend-Eng** | Implements backend tasks (APIs, services, data) | 4: Build |
-| **Frontend-Eng** | Implements frontend tasks (UI, state, routing) | 4: Build |
-| **Reviewer** | Code quality + OWASP security audit (PASS/FAIL) | 5: Review |
-| **QA** | Runs all DoD gates, traces acceptance criteria (PASS/FAIL) | 6: Validate |
-
-Review and QA failures loop back to engineers until all issues are fixed.
+## 14 Ready-Made Agent Swarms
 
 ```bash
 ~/.cappy/scaffold-team.sh product-sdlc \
-  --name dashboard-feature \
+  --name dashboard \
   --description "User analytics dashboard" \
-  --tech "Next.js 15, TypeScript, Supabase"
+  --tech "Next.js 15, Supabase"
 ```
 
-#### Other templates
+| Use when… | Template | Agents |
+|---|---|---|
+| Shipping a real feature | `product-sdlc` | 8 |
+| Auditing a codebase | `audit-sweep` | 8 |
+| Production is on fire | `incident-responder` | 5 |
+| Migrating schema or framework | `migration-squad` | 6 |
+| Pages are slow | `perf-clinic` | 5 |
+| Coverage is shrinking | `test-factory` | 5 |
+| Bumping major versions | `dependency-upgrade` | 5 |
+| Versioning an API v1 → v2 | `api-versioning` | 5 |
+| Onboarding a new dev | `onboarding-guide` | 5 |
+| Writing docs in a sprint | `docs-sprint` | 4 |
+| …plus | `monorepo-splitter`, `code-review`, `refactor-squad`, `fullstack-api` | 3–6 |
 
-```bash
-~/.cappy/scaffold-team.sh fullstack-api \
-  --name payments-api \
-  --description "Building the payments service" \
-  --tech "Rust with Actix-Web and SQLx"
+Each swarm has named handoffs, role-specific context, and approval gates baked in. Failures from Review or QA loop back to engineers until clean.
+
+## The Animated Statusline
+
+Every Claude session sits inside this:
+
+```
+opus-4.7  ▓▓▓▓▓▓▓░░░ 71%   main ✓+3   tasks ▓▓▓▓░░ 4/6   $0.42   12m   ↑ cappy v3.2.0
 ```
 
-All templates:
+Model · context window % · git branch · dirty state · lines changed · live task progress with ETA · session cost · duration · update notifier (single `git ls-remote`, ~200 ms, async — never blocks your prompt).
 
-| Template | Agents | Pipeline |
-|----------|--------|----------|
-| `product-sdlc` | 8 | discovery → spec → design → build → review → QA |
-| `audit-sweep` | 8 | 4 parallel auditors → triage → 2 fixers → verifier |
-| `migration-squad` | 6 | analyze → design → migrate → validate → rollback test |
-| `perf-clinic` | 5 | profile → plan → optimize (BE+FE parallel) → validate |
-| `test-factory` | 5 | analyze gaps → plan → write unit+integration+e2e → validate |
-| `dependency-upgrade` | 5 | scan → plan → upgrade → compatibility test |
-| `incident-responder` | 5 | reproduce → root cause → hotfix → post-mortem |
-| `onboarding-guide` | 5 | map → document architecture → trace flows → write guide |
-| `api-versioning` | 5 | analyze contracts → design v2 → migrate → update clients |
-| `monorepo-splitter` | 5 | map deps → define boundaries → extract → update CI/CD |
-| `fullstack-api` | 6 | architect → build (BE+FE) → test → docs |
-| `code-review` | 3 | security + quality review |
-| `docs-sprint` | 4 | API docs + guides + architecture |
-| `refactor-squad` | 5 | analyze → refactor → test |
+## Hooks That Catch You In The Act
 
-### Project Templates
+| Hook | Trigger | What it does |
+|---|---|---|
+| `post-edit-typecheck.sh` | After `.ts`/`.tsx` edits | Runs `tsc --noEmit` |
+| `post-edit-lint.sh` | After file edits | Auto-runs ESLint / Biome / Ruff / Clippy |
+| `pre-commit-check.sh` | Before `git commit` | Type-check + lint + tests gate |
+| `file-guard.sh` | Before file writes | Blocks edits to `.env`, credentials, keys |
+| `hedge-rejector.mjs` | Stop event | Rejects responses containing *"probably / I think / seems / could be"* |
 
-Generate per-project CLAUDE.md files:
+## Curated MCP Servers
 
-```bash
-~/.cappy/scaffold-project.sh react-nextjs --name my-app
-```
+Opt in per server during install — cappy wires the auth.
 
-Templates: `react-nextjs`, `rust-api`, `python-ml`, `expo-mobile`, `generic-fullstack`
+| Server | What it provides | Auth |
+|---|---|---|
+| **GitHub** | PR/issue management, code search | `gh auth` token or env |
+| **Linear** | Auto-claim tickets, transition status, comment on blockers, attach PR URLs | OAuth via browser |
+| **PostgreSQL** | Database queries and exploration | Connection string |
+| **Playwright** | Browser automation and testing | None |
+
+> Mention `ENG-123` in a prompt and Claude claims the ticket, moves it to In Progress, comments on blockers, and transitions it to your chosen terminal status with the PR URL attached. No fabricated IDs — if Linear MCP isn't connected, it says so.
+
+## Persistent Memory & Autopilot
+
+The opt-in `ruflo` and `mempalace` modules add:
+
+- **`/autopilot enable`** — autonomous task loops that schedule their own wake-ups
+- **`/swarm init`** — multi-agent dispatch with persistent AgentDB
+- **`/watch`** — live event stream from running agents
+- **MemPalace** — local-first semantic memory that survives across sessions
+
+Claude offers autopilot inline whenever a task hits the swarm threshold (>10 files, >300 LOC, or >2 subsystems). Configure prompting via `~/.cappy/ruflo-preferences.json` (`always` / `ask` / `never`).
+
+## All 17 Modules
+
+Install all by default, or pick a subset with `--modules`.
+
+| Module | What it adds |
+|---|---|
+| **core** | SDLC pipeline + 19 mechanical overrides — the engine |
+| **auto-update** | `cappy` CLI shim + 24 h update notifier |
+| **statusline** | Animated status bar with progress, cost, ETA |
+| **settings** | settings.json presets — power-user, cautious, team-lead |
+| **hooks** | Post-edit typecheck, auto-lint, pre-commit gate, file guard |
+| **hedge-detector** | Stop hook that rejects hedging language |
+| **git-safety** | Block force-push to main, conventional commit hints |
+| **mcp** | GitHub, Linear (OAuth), PostgreSQL, Playwright |
+| **teams** | 14 agent swarm templates |
+| **skills** | Task progress dashboard, skill discovery |
+| **templates** | Per-project CLAUDE.md generators (React, Rust, Python, Expo, generic) |
+| **performance** | Bundle size, N+1 queries, lazy loading, pagination |
+| **accessibility** | WCAG 2.2 AA defaults |
+| **devops** | CI/CD, env var safety, Docker, migration discipline |
+| **api-design** | REST conventions, input validation, versioning |
+| **ruflo** | Ruflo agent platform: marketplace + 8 plugins + MCP |
+| **mempalace** | Local-first AI memory with semantic search |
+
+**Opt-in (not in "install all")**
+
+| Module | What it adds |
+|---|---|
+| **huashu-design** | HTML hi-fi prototyping skill ([alchaincyf/huashu-design](https://github.com/alchaincyf/huashu-design)) |
+| **frontend-design** | Anthropic's official frontend skill ([anthropics/claude-code](https://github.com/anthropics/claude-code/tree/main/plugins/frontend-design)) |
+| **cua-driver** | macOS app driver ([trycua/cua](https://github.com/trycua/cua)) |
 
 ## Settings Presets
 
-| Preset | Permissions | Agent Teams | Auto-Dream | Safety |
-|--------|-----------|-------------|------------|--------|
-| **power-user** | Full (Bash, Read, Write, Edit, Web) | Enabled | On | rm -rf blocked |
-| **cautious** | Read + Edit only | Disabled | Off | Bash restricted, secrets blocked |
-| **team-lead** | Full | Enabled | On | rm -rf blocked |
+| Preset | Permissions | Teams | Auto-Dream | Safety |
+|---|---|---|---|---|
+| **power-user** | Full | ✓ | On | `rm -rf` blocked |
+| **cautious** | Read + Edit only | ✗ | Off | Bash restricted, secrets blocked |
+| **team-lead** | Full | ✓ | On | `rm -rf` blocked |
 
-## The `cappy` command
+<details>
+<summary><b>The 19 mechanical overrides (full list)</b></summary>
 
-The `auto-update` module installs a `cappy` CLI shim and a 24h-cadence update notifier in the statusline.
+Each rule is a separately-toggleable section in your CLAUDE.md.
+
+**Pre-Work**
+1. **Evidence Before Explanation** — first action must be a tool call gathering evidence; no causal claims without citations
+2. **Step 0 Cleanup** — remove dead code before refactoring
+3. **Phased Execution** — max 5 files per phase, verify between phases
+
+**Code Quality**
+4. **Senior Dev Override** — fix architectural flaws, don't just follow orders
+5. **Fix As You Go** — broken thing found mid-task gets fixed immediately, no defer lists
+6. **Forced Verification** — must run type-check + lint before declaring done
+6a. **Linear Ticket Workflow** — auto-claim, transition status, comment on blockers, attach PR URLs
+
+**Context Management**
+7. **Sub-Agent Swarming** — parallel agents for tasks >5 files
+7a. **Prefer Ruflo Swarms For Team Work** — route team/swarm work through Ruflo when present
+7b. **Mandatory Swarm Split** — force a swarm when work exceeds >10 files / >300 LOC / >8 design tasks / >2 h / >2 subsystems
+8. **Context Decay Awareness** — re-read files after 10+ messages
+9. **File Read Budget** — 2,000-line cap, chunk large files
+10. **Tool Result Blindness** — detect truncated results, narrow scope
+
+**Edit Safety**
+11. **Edit Integrity** — read before/after every edit, verify changes applied
+12. **No Semantic Search** — grep isn't AST; search all reference types separately
+
+**Definition of Done**
+13. **Verify Before Claiming Done** — read actual output yourself; never trust "agent said done"
+14. **Definition of Done** — type-check, lint, test, build, coverage gates must ALL pass
+
+**Default Workflow**
+15. **SDLC by Default** — all non-trivial tasks follow the 6-phase pipeline with user approval gates
+
+The `performance`, `accessibility`, `devops`, and `api-design` modules add four more rule clusters (16–19) on top of core when installed.
+
+</details>
+
+<details>
+<summary><b>The <code>cappy</code> CLI</b></summary>
 
 ```bash
-cappy update           # interactive prompt, then `git pull` + reinstall
+cappy update           # interactive: pull latest tag + reinstall
 cappy update --yes     # non-interactive
 cappy status           # local SHA, latest SHA, behind count, last-checked
-cappy check            # force a fresh remote check now (bypasses 24h cache)
+cappy check            # force fresh remote check (bypasses 24 h cache)
 cappy version          # print installed cappy version
-cappy help             # show splash + usage
+cappy help             # splash + usage
+cappy uninstall        # remove cappy-managed sections, restore from backup
 ```
 
-**How notifications work:**
-- The statusline reads `~/.cappy/update-status.json`. If it's missing or older than 24 hours, it fires `lib/update-check.sh` async and detached so the prompt never blocks.
-- When an update is available, the statusline shows a `↑ cappy +N` segment (commits behind). The first sighting per day is bold; subsequent same-day renders are dimmer to avoid noise.
-- The check is a single `git ls-remote` (~200 ms) — no clone, no fetch unless you're actually behind.
-- Offline / network errors → silent, no statusline noise.
+**Update notifications**
+- Statusline reads `~/.cappy/update-status.json`. If older than 24 h, it fires a single `git ls-remote` async/detached so the prompt never blocks.
+- When an update is available, the statusline shows `↑ cappy v1.2.3`. First sighting per day is bold; later same-day renders are dimmer to avoid noise.
+- Offline / network errors → silent.
 
-**Where the binary lives:**
-- Shim: `~/.cappy/repo/bin/cappy` (the canonical path)
-- PATH symlink: `~/.local/bin/cappy` (created automatically only if `~/.local/bin` already exists; install never modifies your shell rc files)
-- If `~/.local/bin` isn't on your `$PATH`, run via the canonical path or add it yourself.
+**Where the binary lives**
+- Shim: `~/.cappy/repo/bin/cappy`
+- PATH symlink: `~/.local/bin/cappy` (auto-created only if `~/.local/bin` already exists; install never modifies your shell rc files)
 
-## Updating
+</details>
 
-```bash
-cappy update          # interactive — surfaces any new modules
-cappy update -y       # non-interactive — silent re-apply
-```
+<details>
+<summary><b>How updates and uninstalls work (non-destructive)</b></summary>
 
-`cappy update` pulls the latest tag, then re-runs the installer. The selector is installed-aware: existing modules are re-applied silently, and any modules added since your last install are listed so you can opt in (`a` for all, numbers for specific picks, Enter to skip).
+- **Marker-based CLAUDE.md** — sections wrapped in `<!-- cappy:section:NAME -->` are replaced surgically; your hand-written content outside the markers is preserved
+- **JSON merging** — settings deep-merged via `jq`; arrays unioned, objects recursively merged. Malformed `settings.json` aborts the merge with a clear error rather than truncating
+- **File collision detection** — SHA256 comparison. Identical files skipped; conflicts prompt (skip / overwrite / keep both as `.bak`)
+- **Backups** — every install writes to `~/.claude/backups/cappy-<timestamp>/` first
+- **Idempotent** — re-running the installer is safe; already-installed bits are detected and skipped
+- **Module manifests** — each module has a `module.json` declaring its files, targets, settings fragment, and dependencies
 
-Updates never touch your customizations. Cappy-managed sections in CLAUDE.md (inside `<!-- cappy:managed-start/end -->` markers) are replaced; your own content is preserved.
+`cappy update` pulls the latest tag, then re-runs the installer. Existing modules are re-applied silently; modules added since your last install are listed so you can opt in. `cappy uninstall` removes cappy-managed CLAUDE.md sections and hook files; offers to restore from backup. Your `settings.json` is preserved (remove cappy entries manually if needed).
 
-## Uninstalling
+</details>
 
-```bash
-cappy uninstall
-# or, directly:  ~/.cappy/repo/uninstall.sh
-```
+<details>
+<summary><b>Versioning & releases</b></summary>
 
-This removes cappy-managed CLAUDE.md sections and hook files. Offers to restore from backup. Your settings.json is preserved (remove cappy entries manually if needed).
+Cappy follows [semantic versioning](https://semver.org/). The auto-update notifier is **release-based** — published tags trigger the `↑ cappy v1.2.3` segment. Bug-fix commits between releases don't nag users until you cut a new tag.
 
-## Versioning & Releases
+If no semver tags exist on the remote yet, the notifier falls back to commit mode (`↑ cappy +N` commits behind `main`). The moment any `vX.Y.Z` tag lands, it auto-switches to tag mode on the next 24 h check.
 
-Cappy follows [semantic versioning](https://semver.org/). The auto-update notifier is **release-based** — published tags trigger the `↑ cappy v1.2.3` segment in your statusline. Bug-fix commits between releases don't nag users until you cut a new tag.
-
-**Pre-release fallback**: if no semver tags exist on the remote yet, the notifier falls back to **commit mode** — it shows `↑ cappy +N` (commits behind upstream `main`) so early adopters still see updates. The moment any `vX.Y.Z` tag lands, the notifier auto-switches to tag mode on the next 24 h check.
-
-| Bump | When to use | Examples |
-|------|-------------|----------|
-| **MAJOR** (1.x.x → 2.0.0) | Breaking changes — module removed, incompatible config, user migration required | dropping bash 3.2 support, changing the CLAUDE.md marker format |
-| **MINOR** (1.0.x → 1.1.0) | New modules, new features, backward-compatible additions | the auto-update module, new agent template |
-| **PATCH** (1.0.0 → 1.0.1) | Bug fixes, docs, internal cleanups | the JSON merge fix, README updates |
-
-### Cutting a release (maintainer)
+| Bump | When | Examples |
+|---|---|---|
+| **MAJOR** | Breaking changes — module removed, incompatible config | dropping bash 3.2, marker-format change |
+| **MINOR** | New modules, new features, backward-compatible | new agent template, the auto-update module |
+| **PATCH** | Bug fixes, docs, internal cleanups | jq merge fix, README updates |
 
 ```bash
 ./release.sh patch              # 1.0.0 → 1.0.1
@@ -307,59 +362,55 @@ Cappy follows [semantic versioning](https://semver.org/). The auto-update notifi
 ./release.sh minor --gh         # also `gh release create`
 ```
 
-What it does:
-1. Refuses to run on a dirty tree or off `main` (unless you confirm).
-2. Bumps `version` in `forge.json`.
-3. Collects commits since the last tag into a changelog block.
-4. Commits `release: vX.Y.Z` with the changelog in the body.
-5. Creates an annotated tag `vX.Y.Z`.
-6. Pushes the commit and the tag.
-7. Optionally `gh release create` with auto-generated notes.
+The script refuses dirty trees and off-`main` (unless you confirm), bumps `forge.json`, builds a changelog from commits since the last tag, commits `release: vX.Y.Z`, creates an annotated tag, pushes both, and optionally creates a GitHub release.
 
-How users see the new release:
-- Within 24h, `lib/update-check.sh` queries `git ls-remote --tags`, finds the new highest semver tag, writes `available: true` to `~/.cappy/update-status.json`.
-- The statusline picks it up next render and shows `↑ cappy v1.2.3`.
-- `cappy update` pulls and reinstalls.
+</details>
 
-## Verify Integrity
+<details>
+<summary><b>Verifying release integrity</b></summary>
 
 Each cappy release publishes a SHA-256 checksum of its source tarball in the GitHub release notes.
 
-**Check the published checksum:**
 ```bash
-gh release view v2.3.0 --json body | jq -r .body | grep -A2 "SHA-256"
+gh release view v3.2.0 --json body | jq -r .body | grep -A2 "SHA-256"
 ```
 
-**Manual verification:**
-1. Download the release tarball from the GitHub release page (or via the archive URL):
-   `https://github.com/0xfulgore/cappy/archive/refs/tags/vX.Y.Z.tar.gz`
-2. Compute the checksum locally:
-   ```bash
-   shasum -a 256 cappy-X.Y.Z.tar.gz        # macOS
-   sha256sum cappy-X.Y.Z.tar.gz            # Linux
-   ```
-3. Compare against the `SHA-256` value in the release notes. They must match exactly.
+Manual:
+1. Download: `https://github.com/0xfulgore/cappy/archive/refs/tags/vX.Y.Z.tar.gz`
+2. `shasum -a 256 cappy-X.Y.Z.tar.gz` (macOS) or `sha256sum` (Linux)
+3. Compare against the `SHA-256` value in the release notes — must match exactly.
 
-**Honest limitation:** This is checksum-only verification. It confirms the tarball was not corrupted or substituted in transit, but it is not a full chain-of-trust guarantee. An attacker who compromises the GitHub repository can publish both a malicious tarball and a matching checksum. Stronger integrity — GPG-signed tags verifiable with `git verify-tag` — is tracked as a future improvement (audit-06 CRIT-4) and not yet implemented in this release.
+**Honest limitation:** checksum-only verification confirms the tarball wasn't corrupted in transit, but isn't a full chain-of-trust guarantee. An attacker who compromises the GitHub repository can publish both a malicious tarball and a matching checksum. GPG-signed tags verifiable with `git verify-tag` is tracked as a future improvement.
 
-## How It Works
+</details>
 
-- **Non-destructive**: Always backs up existing configs to `~/.claude/backups/cappy-<timestamp>/` before modifying
-- **Marker-based CLAUDE.md**: Sections wrapped in `<!-- cappy:section:NAME -->` markers enable surgical updates — your hand-written content outside the managed block is preserved
-- **JSON merging**: Settings are deep-merged via `jq` — arrays unioned, objects recursively merged. Inputs are validated up front; a malformed `settings.json` aborts the merge with a clear error rather than truncating your file
-- **File collision detection**: SHA256 comparison — identical files skipped, conflicts prompt user (skip / overwrite / keep both as `.bak`)
-- **Module manifests**: Each module has a `module.json` declaring its files, targets, settings fragment, and dependencies
-- **Idempotent**: Re-running the installer is safe — already-installed bits are detected and skipped (e.g., MemPalace pip package, MCP servers)
+<details>
+<summary><b>Regenerating the demo GIF</b></summary>
+
+The demo at the top is generated from [`assets/demo.sh`](assets/demo.sh) (the visual content) and [`.github/demo.tape`](.github/demo.tape) (the VHS recording script):
+
+```bash
+brew install vhs
+vhs .github/demo.tape       # writes assets/demo.gif
+```
+
+Edit `assets/demo.sh` to change what's shown. It's pure `printf` with no network or side effects, so re-recording is deterministic.
+
+</details>
 
 ## Requirements
 
 - Claude Code CLI installed
 - `jq` (installer offers to install it)
-- `bash` 3.2+ — works with the macOS-shipped bash; bash 4+ also fine
+- `bash` 3.2+ — works with macOS-shipped bash; bash 4+ also fine
 - `git` for clone-based install and updates
-- `node` (only for the `hedge-detector` module)
-- `python3` + `pipx` (only for the `mempalace` module — installer auto-installs `pipx` if missing)
+- `node` (only for `hedge-detector`)
+- `python3` + `pipx` (only for `mempalace` — auto-installs `pipx` if missing)
+
+## Contributing
+
+Issues, PRs, and new agent swarm templates are welcome. CI runs `bash -n`, `shellcheck`, and `jq` validation on every push.
 
 ## License
 
-MIT
+[MIT](LICENSE) — go nuts.
