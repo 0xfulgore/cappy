@@ -107,6 +107,107 @@ ensure_mcp() {
   fi
 }
 
+# ── Preferences ──────────────────────────────────────────────
+# Captured once at install / update; honored by core directive #25
+# (autopilot-handoff). File schema is versioned so future installs
+# can detect stale prefs and re-prompt only when needed.
+PREFS_DIR="${HOME}/.cappy"
+PREFS_FILE="${PREFS_DIR}/ruflo-preferences.json"
+PREFS_VERSION=1
+
+read_existing_pref() {
+  local key="$1"
+  [[ -f "$PREFS_FILE" ]] || return 1
+  jq -re --arg k "$key" '.[$k] // empty' "$PREFS_FILE" 2>/dev/null
+}
+
+write_prefs() {
+  local offer_mode="$1"
+  local post_completion="$2"
+  mkdir -p "$PREFS_DIR"
+  local tmp
+  tmp=$(mktemp)
+  jq -n \
+    --argjson v "$PREFS_VERSION" \
+    --arg om "$offer_mode" \
+    --arg pc "$post_completion" \
+    '{_version: $v, autopilot_offer_mode: $om, autopilot_post_completion: $pc}' \
+    > "$tmp"
+  mv "$tmp" "$PREFS_FILE"
+  log_success "Saved preferences to $PREFS_FILE"
+}
+
+prompt_preferences() {
+  if ! command -v jq >/dev/null 2>&1; then
+    log_warn "jq not found — skipping preference prompts (defaults will apply at runtime)"
+    return 0
+  fi
+
+  # Skip silently in non-interactive mode (CI, piped install).
+  if [[ ! -t 0 || ! -t 1 ]]; then
+    if [[ ! -f "$PREFS_FILE" ]]; then
+      write_prefs "ask" "auto_disable"
+      log_info "Non-interactive install — wrote default prefs (offer=ask, post=auto_disable)"
+    fi
+    return 0
+  fi
+
+  # Skip if prefs already at current schema version.
+  if [[ -f "$PREFS_FILE" ]]; then
+    local existing_version
+    existing_version=$(jq -re '._version // 0' "$PREFS_FILE" 2>/dev/null || echo 0)
+    if (( existing_version >= PREFS_VERSION )); then
+      log_info "Existing ruflo preferences found (v${existing_version}) — skipping prompts"
+      return 0
+    fi
+    log_info "Prefs schema bumped (v${existing_version} → v${PREFS_VERSION}) — re-prompting"
+  fi
+
+  printf "\n"
+  printf "  %sCappy installs Ruflo's autopilot — autonomous task completion via /loop.%s\n" \
+    "$(tput bold 2>/dev/null || true)" "$(tput sgr0 2>/dev/null || true)"
+  printf "  %sTwo quick preferences (saved to ~/.cappy/ruflo-preferences.json):%s\n" \
+    "$(tput dim 2>/dev/null || true)" "$(tput sgr0 2>/dev/null || true)"
+  printf "\n"
+
+  # ── Question 1: when should Claude offer autopilot? ──────
+  printf "  %s1. When a task is large enough to need a swarm, when should Claude offer autopilot?%s\n" \
+    "$(tput bold 2>/dev/null || true)" "$(tput sgr0 2>/dev/null || true)"
+  printf "     [a] always   — auto-enable autopilot for every large task (no prompt)\n"
+  printf "     [b] ask      — prompt me each time (recommended)\n"
+  printf "     [c] never    — never offer; just spawn the swarm\n"
+  printf "     Choice [a/b/c, default b]: "
+  local offer_choice
+  read -r offer_choice
+  local offer_mode
+  case "$(printf '%s' "$offer_choice" | tr '[:upper:]' '[:lower:]')" in
+    a|always) offer_mode="always" ;;
+    c|never)  offer_mode="never"  ;;
+    *)        offer_mode="ask"    ;;
+  esac
+
+  printf "\n"
+
+  # ── Question 2: post-completion behavior ─────────────────
+  printf "  %s2. When autopilot finishes a task, what should happen?%s\n" \
+    "$(tput bold 2>/dev/null || true)" "$(tput sgr0 2>/dev/null || true)"
+  printf "     [a] auto-disable — turn autopilot off, predictable token usage (recommended)\n"
+  printf "     [b] stay paused  — keep enabled but don't loop until next large task\n"
+  printf "     [c] stay on      — leave autopilot fully active until I disable it\n"
+  printf "     Choice [a/b/c, default a]: "
+  local post_choice
+  read -r post_choice
+  local post_completion
+  case "$(printf '%s' "$post_choice" | tr '[:upper:]' '[:lower:]')" in
+    b|paused) post_completion="stay_paused" ;;
+    c|on)     post_completion="stay_on"     ;;
+    *)        post_completion="auto_disable" ;;
+  esac
+
+  write_prefs "$offer_mode" "$post_completion"
+  printf "\n"
+}
+
 # ── Main ─────────────────────────────────────────────────────
 main() {
   log_info "Ruflo setup — installing only what's missing"
@@ -115,10 +216,28 @@ main() {
     ensure_plugin "$plugin" || true
   done
   ensure_mcp || true
+  prompt_preferences || true
   log_success "Ruflo setup complete"
-  printf "  Run %sclaude plugin list%s and %sclaude mcp list%s to verify.\n" \
-    "$(tput setaf 6 2>/dev/null || true)" "$(tput sgr0 2>/dev/null || true)" \
+  printf "\n"
+  printf "  %sQuick reference:%s\n" \
+    "$(tput bold 2>/dev/null || true)" "$(tput sgr0 2>/dev/null || true)"
+  printf "    %s/autopilot enable%s         start the autonomous completion loop\n" \
     "$(tput setaf 6 2>/dev/null || true)" "$(tput sgr0 2>/dev/null || true)"
+  printf "    %s/autopilot-status%s         show progress + iteration count\n" \
+    "$(tput setaf 6 2>/dev/null || true)" "$(tput sgr0 2>/dev/null || true)"
+  printf "    %s/autopilot disable%s        stop the loop\n" \
+    "$(tput setaf 6 2>/dev/null || true)" "$(tput sgr0 2>/dev/null || true)"
+  printf "    %s/swarm init%s               manually initialize a multi-agent swarm\n" \
+    "$(tput setaf 6 2>/dev/null || true)" "$(tput sgr0 2>/dev/null || true)"
+  printf "    %s/watch%s                    live event stream from active swarms\n" \
+    "$(tput setaf 6 2>/dev/null || true)" "$(tput sgr0 2>/dev/null || true)"
+  printf "\n"
+  printf "  %sClaude will also offer autopilot automatically when a task is large enough.%s\n" \
+    "$(tput dim 2>/dev/null || true)" "$(tput sgr0 2>/dev/null || true)"
+  printf "  %sFull invocation guide: modules/ruflo/QUICKSTART.md%s\n" \
+    "$(tput dim 2>/dev/null || true)" "$(tput sgr0 2>/dev/null || true)"
+  printf "  %sVerify install: claude plugin list && claude mcp list%s\n" \
+    "$(tput dim 2>/dev/null || true)" "$(tput sgr0 2>/dev/null || true)"
 }
 
 main "$@"

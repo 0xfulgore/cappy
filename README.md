@@ -41,7 +41,7 @@ The installer asks where your projects live (e.g., `~/Development`), installs a 
 | **accessibility** | WCAG 2.2 AA: keyboard nav, screen readers, contrast, touch targets |
 | **devops** | CI/CD awareness, env var safety, Docker best practices, migrations |
 | **api-design** | REST conventions, input validation, error handling, versioning |
-| **ruflo** | Ruflo agent platform: marketplace + 8 plugins + MCP server |
+| **ruflo** | Ruflo agent platform: marketplace + 8 plugins + MCP server. Adds `/autopilot enable` (autonomous task loops), `/swarm init` (multi-agent), `/watch` (live event stream). Claude offers autopilot inline when a task hits the swarm threshold (per core directive #25). Install asks for autopilot prefs; reference: `modules/ruflo/QUICKSTART.md`. |
 | **mempalace** | MemPalace local-first AI memory: pip package + MCP server (user scope). Auto-installs pipx if missing. Run `mempalace init/mine` per project. |
 
 ### Opt-in modules
