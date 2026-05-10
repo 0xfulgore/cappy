@@ -5,3 +5,6 @@ entities.json
 
 # Claude Code per-project state
 .claude/
+
+# Ruflo / claude-flow per-project runtime state (swarm DBs, task queues, agent logs)
+.claude-flow/
