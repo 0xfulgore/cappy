@@ -4,7 +4,13 @@
   "description": "Ruflo agent platform: marketplace, 8 plugins, and MCP server",
   "requires": [],
   "conflicts": [],
-  "files": [],
+  "files": [
+    {
+      "source": "QUICKSTART.md",
+      "target": "~/.cappy/ruflo-QUICKSTART.md",
+      "mode": "0644"
+    }
+  ],
   "install_type": "files",
   "settings_merge": {},
   "post_install": "bash setup-ruflo.sh"

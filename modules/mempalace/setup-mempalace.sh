@@ -200,13 +200,44 @@ ensure_binary_on_path() {
 }
 
 # ── MCP server (user scope so it works in every project) ────
-mcp_installed() {
+# MemPalace MUST be registered at user scope so it's available in every
+# project. Pre-user-scope installs registered at default (local) scope,
+# which limited the server to the cappy directory only. Migration: detect
+# local-scope registration, remove it, re-register at user scope.
+
+mcp_registered_anywhere() {
   claude mcp list 2>/dev/null | grep -qE "(^|[^[:alnum:]_-])${MEMPALACE_MCP_NAME}([^[:alnum:]_-]|:|$)"
 }
 
+mcp_registered_at_user_scope() {
+  # claude mcp get reports "Scope: User config" when registered at user scope.
+  claude mcp get "$MEMPALACE_MCP_NAME" 2>/dev/null | grep -q "Scope: User config"
+}
+
+mcp_registered_at_local_scope() {
+  claude mcp get "$MEMPALACE_MCP_NAME" 2>/dev/null | grep -q "Scope: Local config"
+}
+
 ensure_mcp() {
-  if mcp_installed; then
-    log_info "MCP server '$MEMPALACE_MCP_NAME' already configured — skipping"
+  # Already at user scope — nothing to do.
+  if mcp_registered_at_user_scope; then
+    log_info "MCP server '$MEMPALACE_MCP_NAME' already at user scope — skipping"
+    return 0
+  fi
+
+  # Migrate from pre-user-scope local-scope registration.
+  if mcp_registered_at_local_scope; then
+    log_info "Migrating '$MEMPALACE_MCP_NAME' from local scope to user scope (so it works in every project)..."
+    if claude mcp remove "$MEMPALACE_MCP_NAME" >/dev/null 2>&1; then
+      log_success "Removed local-scope registration"
+    else
+      log_warn "Failed to remove local-scope mempalace — continuing, user-scope add may fail"
+    fi
+  fi
+
+  # Some other shape exists (HTTP / project-scope / etc.) — leave it alone.
+  if mcp_registered_anywhere && ! mcp_registered_at_local_scope; then
+    log_info "MCP server '$MEMPALACE_MCP_NAME' present at non-local scope — leaving as-is"
     return 0
   fi
 

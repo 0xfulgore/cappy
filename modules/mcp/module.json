@@ -7,5 +7,5 @@
   "files": [],
   "install_type": "files",
   "settings_merge": {},
-  "post_install": null
+  "post_install": "bash setup-mcp.sh"
 }

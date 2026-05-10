@@ -58,23 +58,57 @@ fi
 
 # ── MCP wire-up ─────────────────────────────────────────────
 # Register cua-driver as an MCP server so Claude Code picks it up.
-# Idempotent: skip if already registered.
+# cua-driver MUST be at user scope so it's available in every project.
+# Pre-user-scope installs registered at default (local) scope. Migration:
+# detect local-scope registration, remove it, re-register at user scope.
+
+CUA_DRIVER_MCP_NAME="cua-driver"
+
+_cua_mcp_registered_anywhere() {
+  claude mcp list 2>/dev/null | grep -qi "$CUA_DRIVER_MCP_NAME"
+}
+
+_cua_mcp_registered_at_user_scope() {
+  # claude mcp get reports "Scope: User config" when registered at user scope.
+  claude mcp get "$CUA_DRIVER_MCP_NAME" 2>/dev/null | grep -q "Scope: User config"
+}
+
+_cua_mcp_registered_at_local_scope() {
+  claude mcp get "$CUA_DRIVER_MCP_NAME" 2>/dev/null | grep -q "Scope: Local config"
+}
+
 if command -v claude >/dev/null 2>&1; then
-  if claude mcp list 2>/dev/null | grep -qi 'cua-driver'; then
-    log_info "cua-driver already registered as an MCP server — skipping"
+  # Already at user scope — nothing to do.
+  if _cua_mcp_registered_at_user_scope; then
+    log_info "cua-driver already registered as an MCP server at user scope — skipping"
   else
-    log_info "Registering cua-driver as an MCP server (claude mcp add)"
-    if claude mcp add --transport stdio cua-driver -- cua-driver mcp 2>/dev/null; then
-      log_success "cua-driver registered with Claude Code"
+    # Migrate from pre-user-scope local-scope registration.
+    if _cua_mcp_registered_at_local_scope; then
+      log_info "Migrating '$CUA_DRIVER_MCP_NAME' from local scope to user scope (so it works in every project)..."
+      if claude mcp remove "$CUA_DRIVER_MCP_NAME" >/dev/null 2>&1; then
+        log_success "Removed local-scope registration"
+      else
+        log_warn "Failed to remove local-scope cua-driver — continuing, user-scope add may fail"
+      fi
+    fi
+
+    # Some other shape exists (HTTP / project-scope / etc.) — leave it alone.
+    if _cua_mcp_registered_anywhere && ! _cua_mcp_registered_at_local_scope; then
+      log_info "cua-driver present at non-local scope — leaving as-is"
     else
-      log_warn "claude mcp add failed — register manually:"
-      log_warn "  claude mcp add --transport stdio cua-driver -- cua-driver mcp"
+      log_info "Registering cua-driver as an MCP server at user scope (claude mcp add)"
+      if claude mcp add --scope user --transport stdio "$CUA_DRIVER_MCP_NAME" -- cua-driver mcp 2>/dev/null; then
+        log_success "cua-driver registered with Claude Code (user scope — works in every project)"
+      else
+        log_warn "claude mcp add failed — register manually:"
+        log_warn "  claude mcp add --scope user --transport stdio $CUA_DRIVER_MCP_NAME -- cua-driver mcp"
+      fi
     fi
   fi
 else
   log_info "claude CLI not found — skipping MCP registration"
   log_info "Register later with:"
-  log_info "  claude mcp add --transport stdio cua-driver -- cua-driver mcp"
+  log_info "  claude mcp add --scope user --transport stdio $CUA_DRIVER_MCP_NAME -- cua-driver mcp"
 fi
 
 # ── Permissions: trigger the macOS dialogs ──────────────────

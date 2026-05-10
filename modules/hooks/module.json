@@ -26,7 +26,45 @@
       "mode": "0755"
     }
   ],
-  "settings_merge": {},
+  "settings_merge": {
+    "hooks": {
+      "PreToolUse": [
+        {
+          "matcher": "Edit|Write|MultiEdit",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "bash ~/.claude/hooks/file-guard.sh"
+            }
+          ]
+        },
+        {
+          "matcher": "Bash",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "bash ~/.claude/hooks/pre-commit-check.sh"
+            }
+          ]
+        }
+      ],
+      "PostToolUse": [
+        {
+          "matcher": "Edit|Write|MultiEdit",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "bash ~/.claude/hooks/post-edit-typecheck.sh"
+            },
+            {
+              "type": "command",
+              "command": "bash ~/.claude/hooks/post-edit-lint.sh"
+            }
+          ]
+        }
+      ]
+    }
+  },
   "install_type": "files",
   "post_install": null
 }

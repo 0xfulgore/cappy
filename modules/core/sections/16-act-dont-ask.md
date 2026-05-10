@@ -24,8 +24,8 @@
     - **Yes → ask.** A real branch in behavior earns a real question.
     - **Don't know → do the cheaper, more reversible option** and surface what you assumed.
 
-    ### Why this rule exists alongside rule 13 (epistemic honesty)
-    Rule 13 says *"'I don't know' is a valid answer"* — that applies to **factual claims**, not to **task interpretation**. You're allowed to not know whether Postgres 16 supports JSONB arrays; you're not allowed to ask "which directory?" when there's only one sensible directory. Knowledge gaps deserve honest *"I don't know."* Interpretation gaps deserve a default action plus a one-line assumption note.
+    ### Why this rule exists alongside rule 20 (epistemic honesty)
+    Rule 20 says *"'I don't know' is a valid answer"* — that applies to **factual claims**, not to **task interpretation**. You're allowed to not know whether Postgres 16 supports JSONB arrays; you're not allowed to ask "which directory?" when there's only one sensible directory. Knowledge gaps deserve honest *"I don't know."* Interpretation gaps deserve a default action plus a one-line assumption note.
 
     ### Forbidden phrasings
     - *"Should I…?"* when the answer is obviously yes.

@@ -9,6 +9,76 @@
       "source": "scaffold.sh",
       "target": "~/.cappy/scaffold-team.sh",
       "mode": "0755"
+    },
+    {
+      "source": "templates/api-versioning/team.json",
+      "target": "~/.cappy/templates/api-versioning/team.json",
+      "mode": "0644"
+    },
+    {
+      "source": "templates/audit-sweep/team.json",
+      "target": "~/.cappy/templates/audit-sweep/team.json",
+      "mode": "0644"
+    },
+    {
+      "source": "templates/code-review/team.json",
+      "target": "~/.cappy/templates/code-review/team.json",
+      "mode": "0644"
+    },
+    {
+      "source": "templates/dependency-upgrade/team.json",
+      "target": "~/.cappy/templates/dependency-upgrade/team.json",
+      "mode": "0644"
+    },
+    {
+      "source": "templates/docs-sprint/team.json",
+      "target": "~/.cappy/templates/docs-sprint/team.json",
+      "mode": "0644"
+    },
+    {
+      "source": "templates/fullstack-api/team.json",
+      "target": "~/.cappy/templates/fullstack-api/team.json",
+      "mode": "0644"
+    },
+    {
+      "source": "templates/incident-responder/team.json",
+      "target": "~/.cappy/templates/incident-responder/team.json",
+      "mode": "0644"
+    },
+    {
+      "source": "templates/migration-squad/team.json",
+      "target": "~/.cappy/templates/migration-squad/team.json",
+      "mode": "0644"
+    },
+    {
+      "source": "templates/monorepo-splitter/team.json",
+      "target": "~/.cappy/templates/monorepo-splitter/team.json",
+      "mode": "0644"
+    },
+    {
+      "source": "templates/onboarding-guide/team.json",
+      "target": "~/.cappy/templates/onboarding-guide/team.json",
+      "mode": "0644"
+    },
+    {
+      "source": "templates/perf-clinic/team.json",
+      "target": "~/.cappy/templates/perf-clinic/team.json",
+      "mode": "0644"
+    },
+    {
+      "source": "templates/product-sdlc/team.json",
+      "target": "~/.cappy/templates/product-sdlc/team.json",
+      "mode": "0644"
+    },
+    {
+      "source": "templates/refactor-squad/team.json",
+      "target": "~/.cappy/templates/refactor-squad/team.json",
+      "mode": "0644"
+    },
+    {
+      "source": "templates/test-factory/team.json",
+      "target": "~/.cappy/templates/test-factory/team.json",
+      "mode": "0644"
     }
   ],
   "install_type": "files",

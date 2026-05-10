@@ -266,7 +266,7 @@ main() {
   printf "\n"
   printf "  %sClaude will also offer autopilot automatically when a task is large enough.%s\n" \
     "$(tput dim 2>/dev/null || true)" "$(tput sgr0 2>/dev/null || true)"
-  printf "  %sFull invocation guide: modules/ruflo/QUICKSTART.md%s\n" \
+  printf "  %sFull invocation guide: ~/.cappy/ruflo-QUICKSTART.md%s\n" \
     "$(tput dim 2>/dev/null || true)" "$(tput sgr0 2>/dev/null || true)"
   printf "  %sVerify install: claude plugin list && claude mcp list%s\n" \
     "$(tput dim 2>/dev/null || true)" "$(tput sgr0 2>/dev/null || true)"

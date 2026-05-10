@@ -25,6 +25,6 @@
   "min_claude_code_version": "1.0.0",
   "requires": [
     "jq",
-    "bash>=4"
+    "bash>=3.2"
   ]
 }

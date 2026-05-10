@@ -26,7 +26,7 @@ if [[ ! -t 0 ]]; then
 fi
 
 CAPPY_VERSION="1.0.0"
-CAPPY_REPO="https://github.com/garyshannon/cappy.git"
+CAPPY_REPO="https://github.com/0xfulgore/cappy.git"
 
 # ── Banner ───────────────────────────────────────────────────
 print_banner() {
@@ -74,7 +74,7 @@ Examples:
   ./install.sh --modules core,statusline
 
   # Curl-pipe install
-  curl -fsSL https://raw.githubusercontent.com/garyshannon/cappy/main/install.sh | bash
+  curl -fsSL https://raw.githubusercontent.com/0xfulgore/cappy/main/install.sh | bash
 USAGE
 }
 
@@ -531,7 +531,7 @@ print_summary() {
   printf "    2. Open any project and try: %sclaude \"Add a user dashboard\"%s\n" "$CYAN" "$RST"
   printf "    3. Claude will automatically: discover → spec → design → build → review → validate\n"
 
-  printf "\n  %sLearn more:%s https://github.com/garyshannon/cappy\n\n" "$DIM" "$RST"
+  printf "\n  %sLearn more:%s https://github.com/0xfulgore/cappy\n\n" "$DIM" "$RST"
 }
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

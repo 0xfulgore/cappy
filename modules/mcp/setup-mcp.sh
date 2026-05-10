@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Cappy — MCP Server Setup
-# Interactive installer for MCP servers
+# Interactive installer for MCP servers.
+# Registers all servers at --scope user so they are available in every project.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -28,6 +29,27 @@ if ! command -v claude &>/dev/null; then
   exit 1
 fi
 
+# ── Scope-aware MCP helpers ───────────────────────────────────
+# MCP servers MUST be registered at user scope so they are available in every
+# project. Pre-fix installs registered at default (local) scope, which limits
+# the server to the cappy directory only. Migration: detect local-scope
+# registration, remove it, re-register at user scope.
+
+mcp_server_at_user_scope() {
+  local server_id="$1"
+  claude mcp get "$server_id" 2>/dev/null | grep -q "Scope: User config"
+}
+
+mcp_server_at_local_scope() {
+  local server_id="$1"
+  claude mcp get "$server_id" 2>/dev/null | grep -q "Scope: Local config"
+}
+
+mcp_server_registered_anywhere() {
+  local server_id="$1"
+  claude mcp list 2>/dev/null | grep -qE "(^|[^[:alnum:]_-])${server_id}([^[:alnum:]_-]|:|$)"
+}
+
 setup_server() {
   local config_file="$1"
   local name desc transport url
@@ -42,9 +64,25 @@ setup_server() {
   printf "\n━━ %s\n" "$name"
   printf "   %s\n\n" "$desc"
 
-  # Skip if already installed
-  if claude mcp list 2>/dev/null | grep -q "^${server_id}[[:space:]:]"; then
-    log_info "$name already configured — skipping (run 'claude mcp remove $server_id' to reinstall)"
+  # Already at user scope — nothing to do.
+  if mcp_server_at_user_scope "$server_id"; then
+    log_info "$name already at user scope — skipping (run 'claude mcp remove $server_id' to reinstall)"
+    return 0
+  fi
+
+  # Migrate from local-scope registration.
+  if mcp_server_at_local_scope "$server_id"; then
+    log_info "Migrating '$server_id' from local scope to user scope (so it works in every project)..."
+    if claude mcp remove "$server_id" >/dev/null 2>&1; then
+      log_success "Removed local-scope registration for $server_id"
+    else
+      log_warn "Failed to remove local-scope $server_id — continuing, user-scope add may fail"
+    fi
+  fi
+
+  # Some other shape exists (project-scope / etc.) — leave it alone.
+  if mcp_server_registered_anywhere "$server_id" && ! mcp_server_at_local_scope "$server_id"; then
+    log_info "$name present at non-local scope — leaving as-is"
     return 0
   fi
 
@@ -54,8 +92,8 @@ setup_server() {
       log_error "$name: transport=$transport requires a .url field in the config"
       return 1
     fi
-    log_info "Adding $name (transport: $transport)"
-    if claude mcp add --transport "$transport" "$server_id" "$url" 2>&1; then
+    log_info "Adding $name (transport: $transport, scope: user)"
+    if claude mcp add --scope user --transport "$transport" "$server_id" "$url" 2>&1; then
       log_success "$name configured. First use will open a browser for OAuth."
     else
       log_warn "$name setup may have failed — check 'claude mcp list'"
@@ -63,7 +101,7 @@ setup_server() {
     return 0
   fi
 
-  # Local stdio transport — collect env vars and shell out to npx
+  # Local stdio transport — collect env vars, then register via array exec (no eval)
   local env_args=()
   local env_keys
   env_keys=$(jq -r '.env_vars | keys[]' "$config_file" 2>/dev/null)
@@ -96,16 +134,16 @@ setup_server() {
     fi
   done
 
-  log_info "Adding $name to Claude Code..."
+  log_info "Adding $name to Claude Code (user scope)..."
 
-  # Use claude mcp add with environment variables
-  local cmd="claude mcp add $server_id"
+  # Build argument array — no eval, values are never interpolated as shell code.
+  local cmd_args=("claude" "mcp" "add" "--scope" "user" "$server_id")
   for env_arg in "${env_args[@]}"; do
-    cmd+=" $env_arg"
+    cmd_args+=("$env_arg")
   done
-  cmd+=" -- npx -y @modelcontextprotocol/server-$server_id"
+  cmd_args+=("--" "npx" "-y" "@modelcontextprotocol/server-${server_id}")
 
-  if eval "$cmd" 2>&1; then
+  if "${cmd_args[@]}" 2>&1; then
     log_success "$name configured successfully"
   else
     log_warn "$name setup may have failed — check claude mcp list"

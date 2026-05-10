@@ -9,6 +9,31 @@
       "source": "scaffold-project.sh",
       "target": "~/.cappy/scaffold-project.sh",
       "mode": "0755"
+    },
+    {
+      "source": "expo-mobile.md",
+      "target": "~/.cappy/expo-mobile.md",
+      "mode": "0644"
+    },
+    {
+      "source": "generic-fullstack.md",
+      "target": "~/.cappy/generic-fullstack.md",
+      "mode": "0644"
+    },
+    {
+      "source": "python-ml.md",
+      "target": "~/.cappy/python-ml.md",
+      "mode": "0644"
+    },
+    {
+      "source": "react-nextjs.md",
+      "target": "~/.cappy/react-nextjs.md",
+      "mode": "0644"
+    },
+    {
+      "source": "rust-api.md",
+      "target": "~/.cappy/rust-api.md",
+      "mode": "0644"
     }
   ],
   "install_type": "files",

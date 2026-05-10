@@ -6,7 +6,7 @@
     ### Triggers — fire on ANY of the following
     1. **Rule 7b trips** — task crosses the swarm threshold (>10 files / >300 LOC / >8 tasks / >2h / >2 subsystems).
     2. **Multi-ticket plan in flight** — 2+ tickets in active state (Linear "In Progress", kanban "claimed", or in-progress TaskList items where each item is itself a ticket-sized chunk of work).
-    3. **SDLC Phase 4 (Implementation) begins** — once the user approves the Phase 3 design (per rule 12), Phase 4 dispatch is autopilot-eligible by default.
+    3. **SDLC Phase 4 (Implementation) begins** — once the user approves the Phase 3 design (per rule 15, SDLC BY DEFAULT), Phase 4 dispatch is autopilot-eligible by default.
     4. **Session start with a plan already in flight** — if you boot into a session and any of triggers 1–3 already apply (e.g., resuming work on tickets started in a previous session), evaluate this rule at the **start of your first assistant turn**, not later.
 
     Trigger 4 is the one that catches the case the user expects: *"I told cappy to default to autopilot — why didn't it kick in when I resumed?"* Answer: it must.

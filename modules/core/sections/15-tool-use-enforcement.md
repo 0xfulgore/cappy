@@ -6,7 +6,7 @@
     ### The rule
     Every assistant response must either:
     - **(a)** contain tool calls that make concrete progress on the task, OR
-    - **(b)** deliver a final, complete result to the user (with verification per rule 13/14).
+    - **(b)** deliver a final, complete result to the user (with verification per rule 13 (VERIFY BEFORE CLAIMING DONE) and rule 14 (COMPLETION GATE)).
 
     Responses that *only* describe intentions without executing them are not acceptable. A turn that ends with *"I will now do X"* without doing X is a failed turn.
 
@@ -19,7 +19,7 @@
 
     ### When stopping mid-task is OK
     Stopping is correct when:
-    - You hit a real blocker (missing credential, decision the user must make, broken upstream dependency) — surface it explicitly per rule 24 (block-on-ambiguity).
+    - You hit a real blocker (missing credential, decision the user must make, broken upstream dependency) — surface it explicitly per rule 26 (block-on-ambiguity).
     - You completed the work and need user input on the *next* task.
     - The user explicitly asked you to pause.
 

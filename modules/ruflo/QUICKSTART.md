@@ -38,7 +38,7 @@ Captured at install time, stored at `~/.cappy/ruflo-preferences.json`:
 | `autopilot_offer_mode` | `always` / `ask` / `never` | Whether Claude offers autopilot when a task crosses the swarm threshold (>10 files / >300 LOC / >8 tasks / >2h / >2 subsystems). |
 | `autopilot_post_completion` | `auto_disable` / `stay_paused` / `stay_on` | What happens when autopilot finishes a task. `auto_disable` is the safe default — predictable token usage. |
 
-To change prefs after install, either edit the file directly or re-run `bash ~/Development/cappy/modules/ruflo/setup-ruflo.sh` (it detects the existing prefs and re-prompts only if the schema version has bumped).
+To change prefs after install, either edit the file directly or re-run `bash ~/.cappy/repo/modules/ruflo/setup-ruflo.sh` (it detects the existing prefs and re-prompts only if the schema version has bumped).
 
 ## When does Claude offer autopilot automatically?
 

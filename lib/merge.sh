@@ -27,9 +27,14 @@ merge_json() {
     return 1
   fi
 
-  # Deep merge with jq: incoming values override existing, arrays are unioned
+  # Deep merge with jq.
+  # Strategy semantics:
+  #   "ours"   — on scalar conflict, keep destination (user customisation wins). Safe default for `cappy update`.
+  #   "theirs" — on scalar conflict, overwrite with incoming value. Used by install_module_settings on first install.
+  #   "prompt" — same as "ours" but logs a warning naming the conflicting key so the user is aware.
+  # Arrays are always unioned (deduped) regardless of strategy.
   local merged jq_status
-  merged=$(jq -s '
+  merged=$(jq -s --arg strategy "$strategy" '
     def union_arrays: [.[0], .[1]] | add | unique;
     def deep_merge:
       if (.[0] | type) == "object" and (.[1] | type) == "object" then
@@ -42,13 +47,17 @@ merge_json() {
             elif ($a[$k] | type) == "array" and ($b[$k] | type) == "array" then
               {($k): ([$a[$k], $b[$k]] | union_arrays)}
             else
-              {($k): $b[$k]}
+              if $strategy == "theirs" then {($k): $b[$k]}
+              elif $strategy == "prompt" then ({($k): $a[$k]} | (. , ("WARNING: merge conflict on key \"" + $k + "\" — keeping existing value (strategy=prompt)" | debug | empty)))
+              else {($k): $a[$k]}
+              end
             end
           elif ($b | has($k)) then {($k): $b[$k]}
           else {($k): $a[$k]}
           end
         ) | add // {}
-      else .[1]
+      else
+        if $strategy == "theirs" then .[1] else .[0] end
       end;
     [.[0], .[1]] | deep_merge
   ' "$existing" "$incoming")
@@ -63,8 +72,10 @@ merge_json() {
 }
 
 # Merge a settings fragment into the existing settings.json
+# Strategy defaults to "ours" so re-installs / updates never overwrite user customisations.
 merge_settings_fragment() {
   local fragment="$1"  # JSON string, not a file
+  local strategy="${2:-ours}"
   local settings_file="$CLAUDE_HOME/settings.json"
 
   # Validate the incoming fragment before touching anything.
@@ -86,7 +97,7 @@ merge_settings_fragment() {
   fi
 
   local merged jq_status
-  merged=$(printf '%s' "$fragment" | jq -s '
+  merged=$(printf '%s' "$fragment" | jq -s --arg strategy "$strategy" '
     def union_arrays: [.[0], .[1]] | add | unique;
     def deep_merge:
       if (.[0] | type) == "object" and (.[1] | type) == "object" then
@@ -99,13 +110,17 @@ merge_settings_fragment() {
             elif ($a[$k] | type) == "array" and ($b[$k] | type) == "array" then
               {($k): ([$a[$k], $b[$k]] | union_arrays)}
             else
-              {($k): $b[$k]}
+              if $strategy == "theirs" then {($k): $b[$k]}
+              elif $strategy == "prompt" then ({($k): $a[$k]} | (. , ("WARNING: merge conflict on key \"" + $k + "\" — keeping existing value (strategy=prompt)" | debug | empty)))
+              else {($k): $a[$k]}
+              end
             end
           elif ($b | has($k)) then {($k): $b[$k]}
           else {($k): $a[$k]}
           end
         ) | add // {}
-      else .[1]
+      else
+        if $strategy == "theirs" then .[1] else .[0] end
       end;
     [.[0], .[1]] | deep_merge
   ' "$settings_file" -)
