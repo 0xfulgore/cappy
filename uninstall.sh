@@ -6,6 +6,11 @@ set -euo pipefail
 # Remove cappy-installed files and optionally restore backup
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+if ! command -v jq >/dev/null 2>&1; then
+  printf '[err]  jq is required to uninstall cappy. Install jq first.\n' >&2
+  exit 1
+fi
+
 CAPPY_HOME="${HOME}/.cappy"
 CAPPY_INSTALLED_JSON="${CAPPY_HOME}/installed.json"
 CLAUDE_HOME="${HOME}/.claude"

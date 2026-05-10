@@ -733,6 +733,13 @@ main() {
     log_warn "Some verifications failed — check the errors above."
   fi
 
+  # Phase 6.5: Clear stale update-check stamps
+  # After a manual install.sh re-run (as opposed to `cappy update`), the
+  # old stamps are stale — the installed version has changed but the
+  # statusline would keep showing "update available" until the next 24h
+  # check cycle. Clearing them forces an immediate re-evaluation.
+  rm -f "${HOME}/.cappy/.last-update-check" "${HOME}/.cappy/.notified-"*
+
   # Phase 7: Summary
   print_summary
 }

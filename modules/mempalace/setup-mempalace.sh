@@ -180,10 +180,13 @@ ensure_binary_on_path() {
   fi
 
   # Common install locations
-  local candidates=(
-    "${HOME}/.local/bin"
-    "${HOME}/Library/Python/$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null)/bin"
-  )
+  local py_ver
+  py_ver=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || true)
+  local candidates=( "${HOME}/.local/bin" )
+  if [[ "$(uname -s)" == "Darwin" ]] && [[ -n "$py_ver" ]]; then
+    # macOS pip user-install location (not present on Linux)
+    candidates+=( "${HOME}/Library/Python/${py_ver}/bin" )
+  fi
   local found=""
   for dir in "${candidates[@]}"; do
     if [[ -x "${dir}/${MEMPALACE_MCP_BIN}" ]]; then

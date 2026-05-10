@@ -1,8 +1,12 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Task Progress Status Line for Claude Code
 # Colorful status bar with git, tasks, context, cost, duration
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Note: -e is intentionally omitted — statusline subcommands routinely
+# return non-zero (jq on empty input, git in non-repo dirs, stat on
+# missing files) and we must never abort a statusline render.
+set -uo pipefail
 
 input=$(cat)
 
@@ -221,7 +225,7 @@ latest_mtime=0
 # First: try exact session_id match
 if [ -n "$session_id" ] && [ -d "$HOME/.claude/tasks/$session_id" ]; then
   task_dir="$HOME/.claude/tasks/$session_id/"
-  latest_mtime=$(find "$task_dir" -name "*.json" -type f -exec stat -f "%m" {} \; 2>/dev/null | sort -rn | head -1)
+  latest_mtime=$(find "$task_dir" -name "*.json" -type f -exec sh -c 'stat -f "%m" "$1" 2>/dev/null || stat -c "%Y" "$1"' _ {} \; 2>/dev/null | sort -rn | head -1)
 fi
 
 # Second: if no session match, check for team dirs that reference this session
@@ -235,7 +239,7 @@ if [ -z "$task_dir" ] || [ -z "$latest_mtime" ] || [ "$latest_mtime" = "0" ]; th
       team_dir=$(dirname "$team_cfg")
       team_name=$(basename "$team_dir")
       if [ -d "$HOME/.claude/tasks/$team_name" ]; then
-        dir_mtime=$(find "$HOME/.claude/tasks/$team_name" -name "*.json" -type f -exec stat -f "%m" {} \; 2>/dev/null | sort -rn | head -1)
+        dir_mtime=$(find "$HOME/.claude/tasks/$team_name" -name "*.json" -type f -exec sh -c 'stat -f "%m" "$1" 2>/dev/null || stat -c "%Y" "$1"' _ {} \; 2>/dev/null | sort -rn | head -1)
         if [ -n "$dir_mtime" ] && [ "$dir_mtime" -gt "$latest_mtime" ] 2>/dev/null; then
           latest_mtime=$dir_mtime
           task_dir="$HOME/.claude/tasks/$team_name/"
@@ -255,7 +259,7 @@ if [ -z "$task_dir" ] || [ -z "$latest_mtime" ] || [ "$latest_mtime" = "0" ]; th
           ????????-????-????-????-????????????) continue ;;
         esac
       fi
-      newest=$(find "$dir" -name "*.json" -type f -exec stat -f "%m" {} \; 2>/dev/null | sort -rn | head -1)
+      newest=$(find "$dir" -name "*.json" -type f -exec sh -c 'stat -f "%m" "$1" 2>/dev/null || stat -c "%Y" "$1"' _ {} \; 2>/dev/null | sort -rn | head -1)
       if [ -n "$newest" ] && [ "$newest" -gt "$latest_mtime" ] 2>/dev/null; then
         latest_mtime=$newest
         task_dir="$dir"

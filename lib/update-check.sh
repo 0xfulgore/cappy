@@ -36,7 +36,12 @@ CAPPY_HOME="${CAPPY_HOME:-$HOME/.cappy}"
 CAPPY_REPO="${CAPPY_REPO:-$CAPPY_HOME/repo}"
 STATUS_FILE="$CAPPY_HOME/update-status.json"
 STAMP_FILE="$CAPPY_HOME/.last-update-check"
-LOCK_TTL=3600  # never re-fire the network call within 1h regardless of TTL
+# LOCK_TTL is the LOCAL re-fire guard (1 hour) — prevents this script from
+# hitting the GitHub API more than once per hour even if invoked frequently.
+# The visible 24h cadence advertised in release.sh / bin/cappy is enforced by
+# the statusline hook (modules/statusline/task-progress-statusline.sh) via
+# the .last-update-check stamp file age check.
+LOCK_TTL=3600
 
 [[ -d "$CAPPY_REPO/.git" ]] || exit 0
 command -v git >/dev/null 2>&1 || exit 0
@@ -47,6 +52,22 @@ if [[ -f "$STAMP_FILE" ]]; then
   (( age < LOCK_TTL )) && exit 0
 fi
 touch "$STAMP_FILE" 2>/dev/null || exit 0
+
+# ── Portable semver sort ─────────────────────────────────────
+# Prefer GNU sort -V (Linux, Homebrew, macOS Ventura+).
+# Fall back to an awk-based numeric sort on older macOS where BSD
+# sort has no -V flag.  Handles tags with or without a leading "v".
+version_sort() {
+  if sort -V </dev/null >/dev/null 2>&1; then
+    sort -V
+  else
+    awk -F. '{
+      tag=$0; ver=tag; sub(/^v/, "", ver)
+      split(ver, p, ".")
+      printf "%d %s\n", p[1]*1000000 + p[2]*1000 + p[3], tag
+    }' | sort -k1,1n | awk '{print $2}'
+  fi
+}
 
 cd "$CAPPY_REPO" 2>/dev/null || exit 0
 
@@ -70,7 +91,7 @@ latest_tag=$(git ls-remote --tags --refs "$remote_url" 2>/dev/null \
   | awk '{print $2}' \
   | sed 's|refs/tags/||' \
   | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' \
-  | sort -V \
+  | version_sort \
   | tail -n 1 || true)
 
 # ── Discover installed version ───────────────────────────────
@@ -96,7 +117,7 @@ if [[ -n "$latest_tag" ]]; then
   inst_clean="${installed_ver#v}"
   latest_clean="${latest_tag#v}"
   if [[ "$inst_clean" != "$latest_clean" ]]; then
-    newer=$(printf '%s\n%s\n' "$inst_clean" "$latest_clean" | sort -V | tail -n 1)
+    newer=$(printf '%s\n%s\n' "$inst_clean" "$latest_clean" | version_sort | tail -n 1)
     [[ "$newer" == "$latest_clean" ]] && available=true
   fi
 fi

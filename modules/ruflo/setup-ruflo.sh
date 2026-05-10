@@ -159,6 +159,7 @@ write_prefs() {
   mkdir -p "$PREFS_DIR"
   local tmp
   tmp=$(mktemp)
+  trap 'rm -f "$tmp"' RETURN
   jq -n \
     --argjson v "$PREFS_VERSION" \
     --arg om "$offer_mode" \

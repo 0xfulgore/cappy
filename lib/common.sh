@@ -45,8 +45,33 @@ ensure_jq() {
       brew install jq && return 0
     fi
   elif [[ "$CAPPY_OS" == "linux" ]]; then
-    if prompt_yn "Install jq via apt?"; then
-      sudo apt-get install -y jq && return 0
+    if command -v apt-get >/dev/null 2>&1; then
+      if prompt_yn "Install jq via apt-get?"; then
+        sudo apt-get install -y jq && return 0
+      fi
+    elif command -v dnf >/dev/null 2>&1; then
+      if prompt_yn "Install jq via dnf?"; then
+        sudo dnf install -y jq && return 0
+      fi
+    elif command -v yum >/dev/null 2>&1; then
+      if prompt_yn "Install jq via yum?"; then
+        sudo yum install -y jq && return 0
+      fi
+    elif command -v pacman >/dev/null 2>&1; then
+      if prompt_yn "Install jq via pacman?"; then
+        sudo pacman -S --noconfirm jq && return 0
+      fi
+    elif command -v apk >/dev/null 2>&1; then
+      if prompt_yn "Install jq via apk?"; then
+        sudo apk add jq && return 0
+      fi
+    elif command -v zypper >/dev/null 2>&1; then
+      if prompt_yn "Install jq via zypper?"; then
+        sudo zypper install -y jq && return 0
+      fi
+    else
+      log_error "No supported package manager found (apt-get, dnf, yum, pacman, apk, zypper). Install jq manually: https://stedolan.github.io/jq/download/"
+      return 1
     fi
   fi
   log_error "Cannot continue without jq. Install it manually and re-run."

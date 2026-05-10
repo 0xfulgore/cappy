@@ -111,6 +111,22 @@ fi
 step "Fetching tags"
 git fetch --tags --quiet
 
+# ── Upstream sync guard ──────────────────────────────────────
+# Reject the release early if local main is behind origin/main.
+# A diverged local branch means the commit + tag would be created on
+# stale state; the subsequent push would then fail (or force-push
+# would be needed), leaving the repo in a bad state.
+if git rev-parse --verify "origin/main" >/dev/null 2>&1; then
+  # Check origin/main is an ancestor of HEAD (i.e., local is at-or-ahead of origin).
+  # If origin/main is NOT an ancestor of HEAD, either local is behind or the branches
+  # have diverged — both block a release.
+  if ! git merge-base --is-ancestor origin/main HEAD 2>/dev/null; then
+    err "local branch is behind origin/main (or diverged) — pull before releasing"
+    err "Recovery: git pull --ff-only origin main"
+    exit 10
+  fi
+fi
+
 # ── Compute new version ──────────────────────────────────────
 current=$(jq -r '.version' forge.json)
 if [[ -z "$current" || "$current" == "null" ]]; then
@@ -227,10 +243,33 @@ step "Tagging $tag (annotated)"
 ok "tagged"
 
 # ── Push ─────────────────────────────────────────────────────
+# push_or_recover: push commit then tag, with explicit error handling
+# and copy-pasteable recovery commands for each partial-failure scenario.
+push_or_recover() {
+  local _tag="$1"
+  if ! git push --quiet; then
+    err "git push (commit) failed — nothing was pushed to origin"
+    err "Recovery (no remote state to clean up):"
+    err "  git tag -d $_tag"
+    err "  git reset --hard HEAD~1"
+    return 1
+  fi
+  if ! git push --quiet origin "$_tag"; then
+    err "git push (tag) failed AFTER commit was already pushed to origin"
+    err "The commit is on origin but the tag is NOT. Recovery options:"
+    err "  Option A — retry the tag push (if transient network issue):"
+    err "    git push origin $_tag"
+    err "  Option B — revert commit from origin and clean up locally:"
+    err "    git push --force-with-lease origin HEAD~1:main"
+    err "    git tag -d $_tag"
+    err "    git reset --hard HEAD~1"
+    return 1
+  fi
+}
+
 if (( PUSH )); then
   step "Pushing"
-  git push --quiet
-  git push --quiet origin "$tag"
+  push_or_recover "$tag" || exit 12
   ok "pushed commit and tag $tag"
 else
   warn "--no-push: tag created locally"
@@ -243,8 +282,15 @@ if (( GH )); then
   if command -v gh >/dev/null 2>&1; then
     step "Creating GitHub release"
     if (( PUSH )); then
-      gh release create "$tag" --generate-notes --title "$tag"
-      ok "GitHub release created"
+      if gh release view "$tag" >/dev/null 2>&1; then
+        warn "GitHub release $tag already exists — using existing release"
+      else
+        gh release create "$tag" --generate-notes --title "$tag" || {
+          err "gh release create failed — check 'gh auth status' and try again"
+          exit 11
+        }
+        ok "GitHub release created"
+      fi
     else
       warn "skipping gh release — tag wasn't pushed"
     fi
