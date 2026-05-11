@@ -9,7 +9,7 @@
 #   ./release.sh 1.2.3              # explicit version
 #   ./release.sh patch --dry-run    # show what would happen
 #   ./release.sh patch --no-push    # tag locally, don't push
-#   ./release.sh patch --gh         # also `gh release create`
+#   ./release.sh patch --no-gh      # skip `gh release create` (default: on)
 #
 # Versioning policy (semver):
 #   MAJOR — breaking changes (module removed, incompatible config)
@@ -64,7 +64,7 @@ step() { printf '\n%s━━ %s%s\n' "$BRIGHT_CYAN" "$*" "$RST"; }
 # ── Parse args ───────────────────────────────────────────────
 DRY_RUN=0
 PUSH=1
-GH=0
+GH=1
 BUMP=""
 
 usage() {
@@ -76,6 +76,7 @@ while (( $# )); do
     --dry-run) DRY_RUN=1 ;;
     --no-push) PUSH=0 ;;
     --gh)      GH=1 ;;
+    --no-gh)   GH=0 ;;
     -h|--help) usage; exit 0 ;;
     major|minor|patch) BUMP="$1" ;;
     [0-9]*.[0-9]*.[0-9]*) BUMP="$1" ;;
