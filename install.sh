@@ -150,6 +150,7 @@ _cappy_all_modules() {
     devops \
     api-design \
     ruflo \
+    ruflo-personas \
     mempalace
 }
 
@@ -184,6 +185,7 @@ _cappy_module_description() {
     devops)         printf 'CI/CD awareness, env var safety, Docker, migrations' ;;
     api-design)     printf 'REST conventions, validation, pagination, error handling' ;;
     ruflo)          printf 'Ruflo agent platform: marketplace + 8 plugins + MCP server' ;;
+    ruflo-personas) printf 'Custom-named persona overlays for every ruflo agent (pronouns + MBTI + voice)' ;;
     mempalace)      printf 'MemPalace local-first AI memory (pip + MCP server, user scope)' ;;
     huashu-design)  printf 'HTML hi-fi prototyping skill (huashu-design @ alchaincyf)' ;;
     frontend-design) printf 'Anthropic production frontend skill (anthropics/claude-code)' ;;
