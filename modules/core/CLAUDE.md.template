@@ -13,6 +13,7 @@ You are operating within a constrained context window and strict system prompts.
 <!-- cappy:include:05-sub-agent-swarming -->
 <!-- cappy:include:05b-ruflo-swarms -->
 <!-- cappy:include:05c-mandatory-swarm-threshold -->
+<!-- cappy:include:05d-ruflo-opus-override -->
 <!-- cappy:include:06-context-decay-awareness -->
 <!-- cappy:include:07-file-read-budget -->
 <!-- cappy:include:08-tool-result-blindness -->
