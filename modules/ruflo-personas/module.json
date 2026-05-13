@@ -1,0 +1,25 @@
+{
+  "name": "ruflo-personas",
+  "version": "1.0.0",
+  "description": "Custom-named persona overlays for every installed ruflo agent (pronouns + MBTI + voice)",
+  "requires": ["core", "ruflo"],
+  "conflicts": [],
+  "files": [],
+  "install_type": "claude_md_addon",
+  "settings_merge": {
+    "hooks": {
+      "SessionStart": [
+        {
+          "matcher": "*",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "bash ~/.cappy/repo/modules/ruflo-personas/hooks/driftcheck.sh"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "post_install": true
+}
