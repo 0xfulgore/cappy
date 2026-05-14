@@ -1,0 +1,27 @@
+{
+  "name": "linear-loop",
+  "version": "1.0.0",
+  "description": "Persistent Linear ticket monitor-and-work loop (/linear-loop skill)",
+  "requires": ["mcp"],
+  "conflicts": [],
+  "files": [
+    {
+      "source": "skills/linear-loop/SKILL.md",
+      "target": "~/.claude/skills/linear-loop/SKILL.md",
+      "mode": "0644"
+    }
+  ],
+  "install_type": "files",
+  "settings_merge": {
+    "permissions": {
+      "allow": [
+        "mcp__linear",
+        "CronCreate",
+        "CronList",
+        "CronDelete",
+        "ScheduleWakeup"
+      ]
+    }
+  },
+  "post_install": null
+}
