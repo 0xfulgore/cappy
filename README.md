@@ -214,15 +214,16 @@ Opt in per server during install — cappy wires the auth.
 
 ## The Linear Loop
 
-The opt-in `linear-loop` module installs a `/linear-loop` skill — a persistent, per-project loop that monitors Linear and acts on it without per-turn prompting.
+The opt-in `linear-loop` module installs a `/linear-loop` skill — a persistent, per-project loop that acts as a full Linear teammate without per-turn prompting.
 
 ```bash
-/linear-loop          # run one monitor cycle now
-/linear-loop 4h       # register a per-project cron job, cycle every 4 hours
-/linear-loop stop     # remove this project's loop
+/linear-loop           # run one watch + work cycle now
+/linear-loop 30m       # cron: watch every 1m, full work cycle every 30m
+/linear-loop watch 2m  # set the fast-watch interval (default 1m)
+/linear-loop stop      # remove this project's loop
 ```
 
-Each cycle it: works the highest-priority ticket assigned to you through the SDLC; on a blocker it moves the ticket to *Blocked*, comments the specifics, and reschedules a recheck every few hours; scans unassigned tickets and — for ones not part of someone else's in-flight ticket tree — asks before picking them up; and runs an independent Definition-of-Done gap-check on tickets in *In Review* / *Done*, bouncing any with a gap back to *In Progress* while leaving human-signed-off tickets untouched. It prefers ruflo autopilot as the loop driver when installed, and falls back to native `CronCreate` scheduling otherwise. Requires the `mcp` module (Linear MCP).
+It runs on two tiers. A fast **watch tier** (default every minute) is a cheap read-only poll that catches new tickets, new comments, and replies on tickets the loop is waiting on. A heavier **work cycle** then **triages** incoming tickets (applies labels + un-triages complete ones, proposes priority/estimate/duplicates via comment), **orchestrates** the queue in dependency order — treating epics as units and dispatching independent tickets to parallel swarms — **works** tickets through the SDLC, reschedules blocked ones and watches every minute for the reply, asks before picking up eligible unassigned tickets, and **reviews** your own *and other people's* *In Review* / *Done* work with a Definition-of-Done gap-check plus code-review feedback. It stays deliberately conservative — never closes tickets, never changes someone else's ticket state by default, never invents acceptance criteria. Prefers ruflo autopilot as the driver, native `CronCreate` otherwise. Requires the `mcp` module (Linear MCP).
 
 ## Persistent Memory & Autopilot
 
@@ -263,7 +264,7 @@ Install all by default, or pick a subset with `--modules`.
 
 | Module | What it adds |
 |---|---|
-| **linear-loop** | Persistent `/linear-loop` — monitors Linear, works your tickets, picks up eligible unassigned ones, runs a sign-off gap-check |
+| **linear-loop** | Persistent `/linear-loop` — full Linear teammate: triages, orchestrates, works + reviews tickets; 1-min watch tier |
 | **huashu-design** | HTML hi-fi prototyping skill ([alchaincyf/huashu-design](https://github.com/alchaincyf/huashu-design)) |
 | **frontend-design** | Anthropic's official frontend skill ([anthropics/claude-code](https://github.com/anthropics/claude-code/tree/main/plugins/frontend-design)) |
 | **cua-driver** | macOS app driver ([trycua/cua](https://github.com/trycua/cua)) |
