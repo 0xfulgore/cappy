@@ -212,6 +212,18 @@ Opt in per server during install — cappy wires the auth.
 
 > Mention `ENG-123` in a prompt and Claude claims the ticket, moves it to In Progress, comments on blockers, and transitions it to your chosen terminal status with the PR URL attached. No fabricated IDs — if Linear MCP isn't connected, it says so.
 
+## The Linear Loop
+
+The opt-in `linear-loop` module installs a `/linear-loop` skill — a persistent, per-project loop that monitors Linear and acts on it without per-turn prompting.
+
+```bash
+/linear-loop          # run one monitor cycle now
+/linear-loop 4h       # register a per-project cron job, cycle every 4 hours
+/linear-loop stop     # remove this project's loop
+```
+
+Each cycle it: works the highest-priority ticket assigned to you through the SDLC; on a blocker it moves the ticket to *Blocked*, comments the specifics, and reschedules a recheck every few hours; scans unassigned tickets and — for ones not part of someone else's in-flight ticket tree — asks before picking them up; and runs an independent Definition-of-Done gap-check on tickets in *In Review* / *Done*, bouncing any with a gap back to *In Progress* while leaving human-signed-off tickets untouched. It prefers ruflo autopilot as the loop driver when installed, and falls back to native `CronCreate` scheduling otherwise. Requires the `mcp` module (Linear MCP).
+
 ## Persistent Memory & Autopilot
 
 The opt-in `ruflo` and `mempalace` modules add:
@@ -251,6 +263,7 @@ Install all by default, or pick a subset with `--modules`.
 
 | Module | What it adds |
 |---|---|
+| **linear-loop** | Persistent `/linear-loop` — monitors Linear, works your tickets, picks up eligible unassigned ones, runs a sign-off gap-check |
 | **huashu-design** | HTML hi-fi prototyping skill ([alchaincyf/huashu-design](https://github.com/alchaincyf/huashu-design)) |
 | **frontend-design** | Anthropic's official frontend skill ([anthropics/claude-code](https://github.com/anthropics/claude-code/tree/main/plugins/frontend-design)) |
 | **cua-driver** | macOS app driver ([trycua/cua](https://github.com/trycua/cua)) |

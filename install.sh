@@ -160,6 +160,7 @@ _cappy_all_modules() {
 # install dragged down by network fetches / macOS-only binaries.
 _cappy_optional_modules() {
   printf '%s\n' \
+    linear-loop \
     huashu-design \
     frontend-design \
     cua-driver
@@ -187,6 +188,7 @@ _cappy_module_description() {
     ruflo)          printf 'Ruflo agent platform: marketplace + 8 plugins + MCP server' ;;
     ruflo-personas) printf 'Custom-named persona overlays for every ruflo agent (pronouns + MBTI + voice)' ;;
     mempalace)      printf 'MemPalace local-first AI memory (pip + MCP server, user scope)' ;;
+    linear-loop)    printf 'Persistent /linear-loop: monitor + work Linear tickets, per-project' ;;
     huashu-design)  printf 'HTML hi-fi prototyping skill (huashu-design @ alchaincyf)' ;;
     frontend-design) printf 'Anthropic production frontend skill (anthropics/claude-code)' ;;
     cua-driver)     printf 'macOS app driver: AX-tree + CLI/MCP (cua-driver @ trycua)' ;;
